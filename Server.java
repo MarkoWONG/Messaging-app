@@ -7,10 +7,11 @@
  * Author: Marko Wong
  * Date: 2021-10-10
  * */
-
 import java.net.*;
+import java.time.LocalTime;
 import java.io.*;
 import java.util.Scanner;
+import java.util.List;
 
 public class Server {
 
@@ -19,7 +20,8 @@ public class Server {
     private static Integer serverPort;
     private static Integer blockOut;
     private static Integer timeOut;
-    
+    private static List<Account> accounts;
+    private static List<Account> activeAccounts;
 
     // define ClientThread for handling multi-threading issue
     // ClientThread needs to extend Thread and override run() method
@@ -27,6 +29,7 @@ public class Server {
         private final Socket clientSocket;
         private boolean clientAlive = false;
         private boolean loggedIn = false;
+        private Account currentAccount = null;
 
         ClientThread(Socket clientSocket) {
             this.clientSocket = clientSocket;
@@ -67,49 +70,58 @@ public class Server {
                    // loginUser();
                     if (loggedIn == false){
                         // Prompt user for username
-                        send_message(dataOutputStream, clientID, "Username: ");
+                        send_message(dataOutputStream, "Username: ");
                         String userNameInput = (String) dataInputStream.readUTF();
                         
                         // check username
+                        // Create new account
                         if (!exisitingUser(userNameInput)){
                             // prompt for password
-                            send_message(dataOutputStream, clientID, "This is a new user. Enter a password: ");
+                            send_message(dataOutputStream, "This is a new user. Enter a password: ");
                             String passwordInput = (String) dataInputStream.readUTF();
 
-                            // create new entry for new user
-                            createNewUser(userNameInput, passwordInput);
+                            // create new entry for new account
+                            currentAccount = createNewAccount(userNameInput, passwordInput);
+                            loggedIn = true;
+                            activeAccounts.add(currentAccount);
+                            send_message(dataOutputStream, "Welcome to the greatest messaging application ever!");
                         }
+                        // login into existing account
                         else{
-                            // Keep checking password until correct
-                            while (true){
+                            currentAccount = findAccount(userNameInput);
+
+                            // Check if account is locked out
+                            if ( LocalTime.now().compareTo(currentAccount.getLockedOutFinishTime()) < 0){
+                                send_message(dataOutputStream,  "Your account is blocked due to multiple login failures. Please try again after: " + blockOut + " seconds");
+                            }
+                            // account is not locked out
+                            else {
                                 // check password
                                 boolean activeBlockout = false;
                                 for (int attempts = 0; attempts < 3; attempts++){
                                     // prompt for password
-                                    send_message(dataOutputStream, clientID, "Password: ");
+                                    send_message(dataOutputStream, "Password: ");
                                     String passwordInput = (String) dataInputStream.readUTF();
 
                                     //correct password
                                     if (checkPassword(userNameInput, passwordInput)){
                                         activeBlockout = false;
+                                        loggedIn = true;
+                                        activeAccounts.add(currentAccount);
+                                        send_message(dataOutputStream, "Welcome to the greatest messaging application ever!");
                                         break;
                                     }
                                     // incorrect password
-                                    send_message(dataOutputStream, clientID, "Incorrect Password. Please try again. Attempts left: " + (3 - attempts));
+                                    send_message(dataOutputStream, "Incorrect Password. Please try again. Attempts left: " + (3 - attempts));
                                     activeBlockout = true;
                                 }
                                 if (activeBlockout){
-                                    send_message(dataOutputStream, clientID, "Your account is blocked due to multiple login failures. Please try again after: " + blockOut + " seconds");
-                                    //Thread.sleep(blockOut * 1000);
-                                    // Need to block account not client
-                                }
-                                else{
-                                    break;
+                                    // Lock up the account
+                                    send_message(dataOutputStream, "Your account is blocked due to multiple login failures. Please try again after: " + blockOut + " seconds");
+                                    currentAccount.setLockedOutFinishTime(LocalTime.now().plusSeconds(blockOut));
                                 }
                             }
                         }
-                        loggedIn = true;
-                        send_message(dataOutputStream, clientID, "Welcome to the greatest messaging application ever!");
                     }
                     else{
                         String message = (String) dataInputStream.readUTF();
@@ -137,7 +149,7 @@ public class Server {
          * @param dataOutputStream
          * @param message
          */
-        private void send_message(DataOutputStream dataOutputStream, String clientID, String message) throws IOException{
+        private void send_message(DataOutputStream dataOutputStream, String message) throws IOException{
             dataOutputStream.writeUTF(message);
             dataOutputStream.flush();
         }
@@ -155,6 +167,7 @@ public class Server {
                     String entry = reader.nextLine();
                     String username = entry.split(" ")[0];
                     if (username.equals(input)){
+                        reader.close();
                         return true;
                     }
                 }
@@ -175,6 +188,7 @@ public class Server {
                     String username = entry.split(" ")[0];
                     String password = entry.split(" ")[1];
                     if (username.equals(usernameInput) && password.equals(passwordInput)){
+                        reader.close();
                         return true;
                     }
                 }
@@ -187,22 +201,57 @@ public class Server {
         }
 
         /**
-         * Creates a new user by appending new user to credentials file
-         * @param userName
-         * @param password 
+         * Finds the account in the list of created accounts
+         * @param userNameInput
+         * @return
          */
-        private void createNewUser(String userName, String password) throws IOException{
-            try(FileWriter credFile = new FileWriter("credentials.txt", true);
-                BufferedWriter credFileWriter = new BufferedWriter(credFile);
-                PrintWriter append = new PrintWriter(credFileWriter))
-            {
-                append.println(userName + " " + password);
-            } catch (IOException e) {
-                throw new IOException("credentials.txt was not found");
+        private Account findAccount(String userNameInput){
+            for (Account acc : accounts){
+                if (acc.getUsername().equals(userNameInput)){
+                    return acc;
+                }
             }
+            return null;
         }
+    }
 
-        
+    /**
+     * Creates a new account by appending new account detials to credentials file
+     * @param userName
+     * @param password 
+     */
+    public static Account createNewAccount(String userName, String password) throws IOException{
+        try(
+            FileWriter credFile = new FileWriter("credentials.txt", true);
+            BufferedWriter credFileWriter = new BufferedWriter(credFile);
+            PrintWriter append = new PrintWriter(credFileWriter)
+        ){
+            append.println(userName + " " + password);
+            Account acc = new Account(userName, password);
+            accounts.add(acc);
+            return acc;
+        } 
+        catch (IOException e) {
+            throw new IOException("credentials.txt was not found");
+        }
+    }
+
+    public static void popluateAccounts() throws IOException{
+        try {
+            File credFile = new File("credentials.txt");
+            Scanner reader = new Scanner(credFile);
+            while (reader.hasNextLine()) {
+                String entry = reader.nextLine();
+                String username = entry.split(" ")[0];
+                String password = entry.split(" ")[1];
+                Account acc = new Account(username, password);
+                accounts.add(acc);
+            }
+            reader.close();
+        } 
+        catch (IOException e) {
+            throw new IOException("credentials.txt was not found");
+        }
     }
 
     public static void main(String[] args) throws IOException {
@@ -228,24 +277,14 @@ public class Server {
         while (true) {
             // when new connection request reaches the server, then server socket establishes connection
             Socket clientSocket = serverSocket.accept();
+
+            // Populate existing accounts in the credentials.txt
+            popluateAccounts();
+
             // for each user there would be one thread, all the request/response for that user would be processed in that thread
             // different users will be working in different thread which is multi-threading (i.e., concurrent)
             ClientThread clientThread = new ClientThread(clientSocket);
             clientThread.start();
         }
     }
-
-    
-    // private void loginUser(){
-    //     // Prompt user for username
-    //     String responseMessage = "Please enter User Name: ";
-    //     dataOutputStream.writeUTF(responseMessage);
-    //     dataOutputStream.flush();
-    //     // check username
-    //         // create new entry for new user
-
-    //     // prompt for password
-
-    //         // check password
-    // }
 }
