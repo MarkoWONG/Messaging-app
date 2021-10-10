@@ -71,7 +71,7 @@ public class Server {
                         String userNameInput = (String) dataInputStream.readUTF();
                         
                         // check username
-                        if (!checkCredentials(userNameInput, false)){
+                        if (!exisitingUser(userNameInput)){
                             // prompt for password
                             send_message(dataOutputStream, clientID, "This is a new user. Enter a password: ");
                             String passwordInput = (String) dataInputStream.readUTF();
@@ -82,15 +82,15 @@ public class Server {
                         else{
                             // Keep checking password until correct
                             while (true){
-                                // prompt for password
-                                send_message(dataOutputStream, clientID, "Password: ");
-                                String passwordInput = (String) dataInputStream.readUTF();
-
                                 // check password
                                 boolean activeBlockout = false;
                                 for (int attempts = 0; attempts < 3; attempts++){
+                                    // prompt for password
+                                    send_message(dataOutputStream, clientID, "Password: ");
+                                    String passwordInput = (String) dataInputStream.readUTF();
+
                                     //correct password
-                                    if (checkCredentials(passwordInput, true)){
+                                    if (checkPassword(userNameInput, passwordInput)){
                                         activeBlockout = false;
                                         break;
                                     }
@@ -99,7 +99,7 @@ public class Server {
                                     activeBlockout = true;
                                 }
                                 if (activeBlockout){
-                                    send_message(dataOutputStream, clientID, "Your account is blocked due to multiple login failures. Please try again after: " + blockOut + "seconds");
+                                    send_message(dataOutputStream, clientID, "Your account is blocked due to multiple login failures. Please try again after: " + blockOut + " seconds");
                                     //Thread.sleep(blockOut * 1000);
                                     // Need to block account not client
                                 }
@@ -137,19 +137,9 @@ public class Server {
          * @param dataOutputStream
          * @param message
          */
-        private void send_message(DataOutputStream dataOutputStream, String clientID, String message) throws EOFException, IOException{
-            try{
-                dataOutputStream.writeUTF(message);
-                dataOutputStream.flush();
-            }
-            catch (EOFException e) {
-                System.out.println("===== the user disconnected, user - " + clientID);
-                clientAlive = false;
-            } 
-            catch (IOException e) {
-                System.out.println("===== the user disconnected, user - " + clientID);
-                    clientAlive = false;
-            }
+        private void send_message(DataOutputStream dataOutputStream, String clientID, String message) throws IOException{
+            dataOutputStream.writeUTF(message);
+            dataOutputStream.flush();
         }
 
         /**
@@ -157,18 +147,34 @@ public class Server {
          * @param input
          * @return True for exisiting user/ correct password, false for new user/incorrect password
          */
-        private boolean checkCredentials(String input, Boolean checkPass) throws FileNotFoundException{
+        private boolean exisitingUser(String input) throws FileNotFoundException{
             try {
                 File credFile = new File("credentials.txt");
                 Scanner reader = new Scanner(credFile);
                 while (reader.hasNextLine()) {
                     String entry = reader.nextLine();
-                    String field = entry.split(" ")[0];
-                    //change field to password field
-                    if (checkPass){
-                        field = entry.split(" ")[1];
+                    String username = entry.split(" ")[0];
+                    if (username.equals(input)){
+                        return true;
                     }
-                    if (field.equals(input)){
+                }
+                reader.close();
+                return false;
+            } 
+            catch (FileNotFoundException e) {
+                throw new FileNotFoundException("credentials.txt was not found");
+            }
+        }
+
+        private boolean checkPassword(String usernameInput, String passwordInput) throws FileNotFoundException{
+            try {
+                File credFile = new File("credentials.txt");
+                Scanner reader = new Scanner(credFile);
+                while (reader.hasNextLine()) {
+                    String entry = reader.nextLine();
+                    String username = entry.split(" ")[0];
+                    String password = entry.split(" ")[1];
+                    if (username.equals(usernameInput) && password.equals(passwordInput)){
                         return true;
                     }
                 }

@@ -41,16 +41,27 @@ public class Client {
             // login
             String responseMessage = (String) dataInputStream.readUTF();
             if (responseMessage.equals("Username: ")){
-                System.out.println("[recv] " + responseMessage);
+                System.out.print("[recv] " + responseMessage);
                 String userNameInput = reader.readLine();
                 dataOutputStream.writeUTF(userNameInput);
                 dataOutputStream.flush();
             }
-            else if (responseMessage.matches("(.*)[Pp]assword(.*)")){
+            else if (responseMessage.matches("(.*)Incorrect Password(.*)")){
                 System.out.println("[recv] " + responseMessage);
+            }
+            else if (responseMessage.matches("(.*)Password(.*)")){
+                System.out.print("[recv] " + responseMessage);
                 String passwordInput = reader.readLine();
                 dataOutputStream.writeUTF(passwordInput);
                 dataOutputStream.flush();
+            }
+            else if (responseMessage.matches("(.*)blocked(.*)")){
+                System.out.println("[recv] " + responseMessage);
+                System.out.println("Good bye");
+                clientSocket.close();
+                dataOutputStream.close();
+                dataInputStream.close();
+                break;
             }
             else{
                 System.out.println("===== Please input any message you want to send to the server: ");
