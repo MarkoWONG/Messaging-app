@@ -111,21 +111,24 @@ public class Server {
                         loggedIn = true;
                         send_message(dataOutputStream, clientID, "Welcome to the greatest messaging application ever!");
                     }
-
-                    String message = (String) dataInputStream.readUTF();
-                    System.out.println("[recv]  " + message + " from user - " + clientID);
-                    String responseMessage = "unknown request";
-                    System.out.println("[send] " + message);
-                    dataOutputStream.writeUTF(responseMessage);
-                    dataOutputStream.flush();
+                    else{
+                        String message = (String) dataInputStream.readUTF();
+                        System.out.println("[recv]  " + message + " from user - " + clientID);
+                        String responseMessage = "unknown request";
+                        System.out.println("[send] " + message);
+                        dataOutputStream.writeUTF(responseMessage);
+                        dataOutputStream.flush();
+                    }
                 } 
                 catch (EOFException e) {
                     System.out.println("===== the user disconnected, user - " + clientID);
                     clientAlive = false;
                 } 
                 catch (IOException e) {
-                    e.printStackTrace();
+                    System.out.println("===== the user disconnected, user - " + clientID);
+                    clientAlive = false;
                 }
+                
             }
         }
 
@@ -144,7 +147,8 @@ public class Server {
                 clientAlive = false;
             } 
             catch (IOException e) {
-                e.printStackTrace();
+                System.out.println("===== the user disconnected, user - " + clientID);
+                    clientAlive = false;
             }
         }
 
