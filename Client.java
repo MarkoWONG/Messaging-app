@@ -63,17 +63,15 @@ public class Client {
                 dataInputStream.close();
                 break;
             }
-            else{
-                System.out.println("===== Please input any message you want to send to the server: ");
+            else if (responseMessage.matches("(.*)Awaiting Commands(.*)")){
+                // receive the server response from dataInputStream
+                System.out.println("[recv] " + responseMessage);
                 // read input from command line
                 String message = reader.readLine();
 
                 // write message into dataOutputStream and send/flush to the server
                 dataOutputStream.writeUTF(message);
                 dataOutputStream.flush();
-
-                // receive the server response from dataInputStream
-                System.out.println("[recv] " + responseMessage);
 
                 System.out.println("Do you want to continue(y/n) :");
                 String answer = reader.readLine();
@@ -84,6 +82,9 @@ public class Client {
                     dataInputStream.close();
                     break;
                 }
+            }
+            else{
+                System.out.println("[recv] " + responseMessage);
             }
         }
     }

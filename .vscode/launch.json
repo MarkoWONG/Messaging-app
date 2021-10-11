@@ -22,7 +22,7 @@
             "name": "Launch Server",
             "request": "launch",
             "mainClass": "Server",
-            "args": "8000 3 3",
+            "args": "8000 30 30",
             "projectName": "messenger_9171da29"
         }
     ]

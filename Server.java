@@ -29,7 +29,7 @@ public class Server {
     private static class ClientThread extends Thread {
         private final Socket clientSocket;
         private boolean clientAlive = false;
-        private boolean loggedIn = false;
+        private boolean clientInAccount = false;
         private Account currentAccount = null;
 
         ClientThread(Socket clientSocket) {
@@ -69,7 +69,7 @@ public class Server {
 
                     // Authenticate User
                    // loginUser();
-                    if (loggedIn == false){
+                    if (clientInAccount == false){
                         // Prompt user for username
                         send_message(dataOutputStream, "Username: ");
                         String userNameInput = (String) dataInputStream.readUTF();
@@ -83,7 +83,8 @@ public class Server {
 
                             // create new entry for new account
                             currentAccount = createNewAccount(userNameInput, passwordInput);
-                            loggedIn = true;
+                            currentAccount.setLoggedIn(true);
+                            clientInAccount = true;
                             activeAccounts.add(currentAccount);
                             send_message(dataOutputStream, "Welcome to the greatest messaging application ever!");
                         }
@@ -107,8 +108,9 @@ public class Server {
                                     //correct password
                                     if (checkPassword(userNameInput, passwordInput)){
                                         activeBlockout = false;
-                                        loggedIn = true;
+                                        clientInAccount = true;
                                         activeAccounts.add(currentAccount);
+                                        currentAccount.setLoggedIn(true);
                                         send_message(dataOutputStream, "Welcome to the greatest messaging application ever!");
                                         break;
                                     }
@@ -124,13 +126,33 @@ public class Server {
                             }
                         }
                     }
+
+                    // Logged in and waiting for commands
                     else{
-                        String message = (String) dataInputStream.readUTF();
-                        System.out.println("[recv]  " + message + " from user - " + clientID);
-                        String responseMessage = "unknown request";
-                        System.out.println("[send] " + message);
-                        dataOutputStream.writeUTF(responseMessage);
-                        dataOutputStream.flush();
+                        send_message(dataOutputStream, "====== Awaiting Commands: ");
+                        LocalTime timeOutTimer = LocalTime.now();
+                        boolean timedOut = true;
+                        System.out.println("waiting");
+                        while (timeOutTimer.plusSeconds(timeOut).compareTo(LocalTime.now()) > 0) {
+                            if (dataInputStream.available() > 0) {
+                                timedOut = false;
+                            }
+                        }
+                        if (timedOut){
+                            send_message(dataOutputStream, "Inactivity Detected. Please login again");
+                            System.out.println("inactivity msg sent");
+                            currentAccount.setLoggedIn(false);
+                            activeAccounts.remove(currentAccount);
+                            clientInAccount = false;
+                        }
+                        else {
+                            String message = (String) dataInputStream.readUTF();
+                            System.out.println("[recv]  " + message + " from user - " + clientID);
+                            String responseMessage = "unknown request";
+                            System.out.println("[send] " + message);
+                            dataOutputStream.writeUTF(responseMessage);
+                            dataOutputStream.flush();
+                        }
                     }
                 } 
                 catch (EOFException e) {
@@ -287,6 +309,8 @@ public class Server {
             // different users will be working in different thread which is multi-threading (i.e., concurrent)
             ClientThread clientThread = new ClientThread(clientSocket);
             clientThread.start();
+
+            // Check for user inactivity
         }
     }
 }

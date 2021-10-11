@@ -56,7 +56,7 @@ public class Account {
     public void setLockedOutFinishTime(LocalTime lockedOutFinishTime) {
         this.lockedOutFinishTime = lockedOutFinishTime;
     }
-
+    
     public List<Account> getBlockedAccounts() {
         return this.blockedAccounts;
     }
