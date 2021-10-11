@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.time.LocalTime;
+import java.net.*;
 
 public class Account {
     // Attributes
@@ -8,6 +9,7 @@ public class Account {
     private boolean loggedIn;
     private LocalTime lockedOutFinishTime;
     private List<Account> blockedAccounts;
+    private Socket activeSocket;
 
     // Constructor
     public Account(String username, String password){
@@ -20,7 +22,6 @@ public class Account {
 
 
     // Getter and Setters
-
     public String getUsername() {
         return this.username;
     }
@@ -65,4 +66,12 @@ public class Account {
         this.blockedAccounts = blockedAccounts;
     }
 
+    public Socket getActiveSocket() {
+        return this.activeSocket;
+    }
+
+    public void setActiveSocket(Socket activeSocket) {
+        this.activeSocket = activeSocket;
+    }
+    
 }

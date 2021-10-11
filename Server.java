@@ -71,22 +71,23 @@ public class Server {
                    // loginUser();
                     if (clientInAccount == false){
                         // Prompt user for username
-                        send_message(dataOutputStream, "Username: ");
+                        sendMessage(dataOutputStream, "Username: ");
                         String userNameInput = (String) dataInputStream.readUTF();
                         
                         // check username
                         // Create new account
                         if (!exisitingUser(userNameInput)){
                             // prompt for password
-                            send_message(dataOutputStream, "This is a new user. Enter a password: ");
+                            sendMessage(dataOutputStream, "This is a new user. Enter a password: ");
                             String passwordInput = (String) dataInputStream.readUTF();
 
                             // create new entry for new account
                             currentAccount = createNewAccount(userNameInput, passwordInput);
                             currentAccount.setLoggedIn(true);
+                            currentAccount.setActiveSocket(clientSocket);
                             clientInAccount = true;
                             activeAccounts.add(currentAccount);
-                            send_message(dataOutputStream, "Welcome to the greatest messaging application ever!");
+                            sendMessage(dataOutputStream, "Welcome to the greatest messaging application ever!");
                         }
                         // login into existing account
                         else{
@@ -94,11 +95,11 @@ public class Server {
 
                             // Allow only one connection to each account
                             if (activeAccounts.contains(currentAccount)){
-                                send_message(dataOutputStream, userNameInput + " is already in use. Please use another account.");
+                                sendMessage(dataOutputStream, userNameInput + " is already in use. Please use another account.");
                             }
                             // Check if account is locked out
                             else if ( LocalTime.now().compareTo(currentAccount.getLockedOutFinishTime()) < 0){
-                                send_message(dataOutputStream,  "Your account is blocked due to multiple login failures. Please try again after: " + blockOut + " seconds");
+                                sendMessage(dataOutputStream,  "Your account is blocked due to multiple login failures. Please try again after: " + blockOut + " seconds");
                             }
                             // account is not locked out
                             else {
@@ -106,7 +107,7 @@ public class Server {
                                 boolean activeBlockout = false;
                                 for (int attempts = 0; attempts < 3; attempts++){
                                     // prompt for password
-                                    send_message(dataOutputStream, "Password: ");
+                                    sendMessage(dataOutputStream, "Password: ");
                                     String passwordInput = (String) dataInputStream.readUTF();
 
                                     //correct password
@@ -115,16 +116,17 @@ public class Server {
                                         clientInAccount = true;
                                         activeAccounts.add(currentAccount);
                                         currentAccount.setLoggedIn(true);
-                                        send_message(dataOutputStream, "Welcome to the greatest messaging application ever!");
+                                        currentAccount.setActiveSocket(clientSocket);
+                                        sendMessage(dataOutputStream, "Welcome to the greatest messaging application ever!");
                                         break;
                                     }
                                     // incorrect password
-                                    send_message(dataOutputStream, "Incorrect Password. Please try again. Attempts left: " + (3 - attempts));
+                                    sendMessage(dataOutputStream, "Incorrect Password. Please try again. Attempts left: " + (3 - attempts));
                                     activeBlockout = true;
                                 }
                                 if (activeBlockout){
                                     // Lock up the account
-                                    send_message(dataOutputStream, "Your account is blocked due to multiple login failures. Please try again after: " + blockOut + " seconds");
+                                    sendMessage(dataOutputStream, "Your account is blocked due to multiple login failures. Please try again after: " + blockOut + " seconds");
                                     currentAccount.setLockedOutFinishTime(LocalTime.now().plusSeconds(blockOut));
                                 }
                             }
@@ -133,7 +135,7 @@ public class Server {
 
                     // Logged in and waiting for commands
                     else{
-                        send_message(dataOutputStream, "====== Awaiting Commands: ");
+                        sendMessage(dataOutputStream, "====== Awaiting Commands: ");
                         LocalTime timeOutTimer = LocalTime.now();
                         boolean timedOut = true;
                         System.out.println("waiting");
@@ -144,7 +146,7 @@ public class Server {
                             }
                         }
                         if (timedOut){
-                            send_message(dataOutputStream, "Inactivity Detected. Please login again");
+                            sendMessage(dataOutputStream, "Inactivity Detected. Please login again");
                             System.out.println("inactivity msg sent");
                             currentAccount.setLoggedIn(false);
                             activeAccounts.remove(currentAccount);
@@ -154,6 +156,8 @@ public class Server {
                             String message = (String) dataInputStream.readUTF();
                             System.out.println("[recv]  " + message + " from user - " + clientID);
                             if (message.equals("logout")){
+                                sendAll(currentAccount.getUsername() + " logged out");
+                                currentAccount.setActiveSocket(null);
                                 throw new IOException();
                             }
                             String responseMessage = "unknown request";
@@ -173,16 +177,6 @@ public class Server {
                 }
                 
             }
-        }
-
-        /**
-         * Sends a message to Client
-         * @param dataOutputStream
-         * @param message
-         */
-        private void send_message(DataOutputStream dataOutputStream, String message) throws IOException{
-            dataOutputStream.writeUTF(message);
-            dataOutputStream.flush();
         }
 
         /**
@@ -230,20 +224,6 @@ public class Server {
                 throw new FileNotFoundException("credentials.txt was not found");
             }
         }
-
-        /**
-         * Finds the account in the list of created accounts
-         * @param userNameInput
-         * @return
-         */
-        private Account findAccount(String userNameInput){
-            for (Account acc : accounts){
-                if (acc.getUsername().equals(userNameInput)){
-                    return acc;
-                }
-            }
-            return null;
-        }
     }
 
     /**
@@ -251,7 +231,7 @@ public class Server {
      * @param userName
      * @param password 
      */
-    public static Account createNewAccount(String userName, String password) throws IOException{
+    private static Account createNewAccount(String userName, String password) throws IOException{
         try(
             FileWriter credFile = new FileWriter("credentials.txt", true);
             BufferedWriter credFileWriter = new BufferedWriter(credFile);
@@ -267,7 +247,21 @@ public class Server {
         }
     }
 
-    public static void popluateAccounts() throws IOException{
+    /**
+     * Finds the account in the list of created accounts
+     * @param userNameInput
+     * @return
+     */
+    private static Account findAccount(String userNameInput){
+        for (Account acc : accounts){
+            if (acc.getUsername().equals(userNameInput)){
+                return acc;
+            }
+        }
+        return null;
+    }
+
+    private static void popluateAccounts() throws IOException{
         try {
             File credFile = new File("credentials.txt");
             Scanner reader = new Scanner(credFile);
@@ -282,6 +276,29 @@ public class Server {
         } 
         catch (IOException e) {
             throw new IOException("credentials.txt was not found");
+        }
+    }
+
+    /**
+     * Sends a message to Client
+     * @param dataOutputStream
+     * @param message
+     */
+    private static void sendMessage(DataOutputStream dataOutputStream, String message) throws IOException{
+        dataOutputStream.writeUTF(message);
+        dataOutputStream.flush();
+    }
+
+    
+    private static void sendAll(String message){
+        for (Account acc : activeAccounts){
+            DataOutputStream dataOutputStream = null;
+            try {
+                dataOutputStream = new DataOutputStream(acc.getActiveSocket().getOutputStream());
+                sendMessage(dataOutputStream, message);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

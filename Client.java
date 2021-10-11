@@ -35,9 +35,14 @@ public class Client {
 
         // define a BufferedReader to get input from command line i.e., standard input from keyboard
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        
+        Boolean clientAlive = true;
 
-        while (true) {
-            
+        // Start Another Thread for listening to messages
+        ListeningThread listeningThread = new ListeningThread(clientSocket);
+        listeningThread.start();
+
+        while (clientAlive) {
             // login
             String responseMessage = (String) dataInputStream.readUTF();
             if (responseMessage.equals("Username: ")){
@@ -61,7 +66,7 @@ public class Client {
                 clientSocket.close();
                 dataOutputStream.close();
                 dataInputStream.close();
-                break;
+                clientAlive = false;
             }
             else if (responseMessage.matches("(.*)Awaiting Commands(.*)")){
                 // receive the server response from dataInputStream
@@ -73,20 +78,31 @@ public class Client {
                 dataOutputStream.writeUTF(message);
                 dataOutputStream.flush();
                 if (message.equals("logout")){
-                    break;
+                    clientAlive = false;
                 }
-                // System.out.println("Do you want to continue(y/n) :");
-                // String answer = reader.readLine();
-                // if (answer.equals("n")) {
-                //     System.out.println("Good bye");
-                //     clientSocket.close();
-                //     dataOutputStream.close();
-                //     dataInputStream.close();
-                //     break;
-                // }
             }
             else{
                 System.out.println("[recv] " + responseMessage);
+            }
+        }
+    }
+
+    // define ClientThread for handling multi-threading issue
+    // ClientThread needs to extend Thread and override run() method
+    private static class ListeningThread extends Thread {
+        private final Socket clientSocket;
+
+        ListeningThread(Socket clientSocket) {
+            this.clientSocket = clientSocket;
+        }
+
+        @Override
+        public void run() {
+            super.run();
+            String message;
+            while (clientAlive){
+                    String responseMessage = (String) dataInputStream.readUTF();
+                    System.out.println("[recv] " + responseMessage);
             }
         }
     }
