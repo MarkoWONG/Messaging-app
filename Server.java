@@ -92,8 +92,12 @@ public class Server {
                         else{
                             currentAccount = findAccount(userNameInput);
 
+                            // Allow only one connection to each account
+                            if (activeAccounts.contains(currentAccount)){
+                                send_message(dataOutputStream, userNameInput + " is already in use. Please use another account.");
+                            }
                             // Check if account is locked out
-                            if ( LocalTime.now().compareTo(currentAccount.getLockedOutFinishTime()) < 0){
+                            else if ( LocalTime.now().compareTo(currentAccount.getLockedOutFinishTime()) < 0){
                                 send_message(dataOutputStream,  "Your account is blocked due to multiple login failures. Please try again after: " + blockOut + " seconds");
                             }
                             // account is not locked out
@@ -136,6 +140,7 @@ public class Server {
                         while (timeOutTimer.plusSeconds(timeOut).compareTo(LocalTime.now()) > 0) {
                             if (dataInputStream.available() > 0) {
                                 timedOut = false;
+                                break;
                             }
                         }
                         if (timedOut){
@@ -148,6 +153,9 @@ public class Server {
                         else {
                             String message = (String) dataInputStream.readUTF();
                             System.out.println("[recv]  " + message + " from user - " + clientID);
+                            if (message.equals("logout")){
+                                throw new IOException();
+                            }
                             String responseMessage = "unknown request";
                             System.out.println("[send] " + message);
                             dataOutputStream.writeUTF(responseMessage);

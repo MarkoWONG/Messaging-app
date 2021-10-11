@@ -72,16 +72,18 @@ public class Client {
                 // write message into dataOutputStream and send/flush to the server
                 dataOutputStream.writeUTF(message);
                 dataOutputStream.flush();
-
-                System.out.println("Do you want to continue(y/n) :");
-                String answer = reader.readLine();
-                if (answer.equals("n")) {
-                    System.out.println("Good bye");
-                    clientSocket.close();
-                    dataOutputStream.close();
-                    dataInputStream.close();
+                if (message.equals("logout")){
                     break;
                 }
+                // System.out.println("Do you want to continue(y/n) :");
+                // String answer = reader.readLine();
+                // if (answer.equals("n")) {
+                //     System.out.println("Good bye");
+                //     clientSocket.close();
+                //     dataOutputStream.close();
+                //     dataInputStream.close();
+                //     break;
+                // }
             }
             else{
                 System.out.println("[recv] " + responseMessage);
