@@ -49,7 +49,7 @@ public class Client {
             else if (responseMessage.matches("(.*)Incorrect Password(.*)")){
                 System.out.println("[recv] " + responseMessage);
             }
-            else if (responseMessage.matches("(.*)Password(.*)")){
+            else if (responseMessage.matches("(.*)[Pp]assword(.*)")){
                 System.out.print("[recv] " + responseMessage);
                 String passwordInput = reader.readLine();
                 dataOutputStream.writeUTF(passwordInput);

@@ -1,6 +1,5 @@
-
+import java.util.ArrayList;
 import java.util.List;
-
 import java.time.LocalTime;
 
 public class Account {
@@ -15,7 +14,7 @@ public class Account {
         this.username = username;
         this.password = password;
         this.loggedIn = false;
-        this.blockedAccounts = null;
+        this.blockedAccounts = new ArrayList<>();
         this.lockedOutFinishTime = LocalTime.now();
     }
 

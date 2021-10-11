@@ -12,6 +12,7 @@ import java.time.LocalTime;
 import java.io.*;
 import java.util.Scanner;
 import java.util.List;
+import java.util.ArrayList;
 
 public class Server {
 
@@ -20,8 +21,8 @@ public class Server {
     private static Integer serverPort;
     private static Integer blockOut;
     private static Integer timeOut;
-    private static List<Account> accounts;
-    private static List<Account> activeAccounts;
+    private static List<Account> accounts = new ArrayList<>();
+    private static List<Account> activeAccounts = new ArrayList<>();;
 
     // define ClientThread for handling multi-threading issue
     // ClientThread needs to extend Thread and override run() method
@@ -270,6 +271,10 @@ public class Server {
 
         // define server socket with the input port number, by default the host would be localhost i.e., 127.0.0.1
         serverSocket = new ServerSocket(serverPort);
+
+        // Populate existing accounts in the credentials.txt
+        popluateAccounts();
+
         // make serverSocket listen connection request from clients
         System.out.println("===== Server is running =====");
         System.out.println("===== Waiting for connection request from clients...=====");
@@ -277,9 +282,6 @@ public class Server {
         while (true) {
             // when new connection request reaches the server, then server socket establishes connection
             Socket clientSocket = serverSocket.accept();
-
-            // Populate existing accounts in the credentials.txt
-            popluateAccounts();
 
             // for each user there would be one thread, all the request/response for that user would be processed in that thread
             // different users will be working in different thread which is multi-threading (i.e., concurrent)
