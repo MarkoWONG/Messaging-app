@@ -25,10 +25,6 @@ public class Client {
     public void sendMessage(){
         Scanner scanner = new Scanner(System.in);
         try{
-            // bufferedWriter.write(username);
-            // bufferedWriter.newLine();
-            // bufferedWriter.flush();
-
             while (socket.isConnected() && !socket.isClosed() ){
                 String message = scanner.nextLine();
                 bufferedWriter.write(message);
@@ -56,10 +52,14 @@ public class Client {
                     try{
                         messageFromChat = bufferedReader.readLine();
                         if (
-                            messageFromChat.matches("(.*)[Pp]assword:(.*)") ||
-                            messageFromChat.matches("(.*)Username:(.*)")
+                            messageFromChat.matches("^[Pp]assword:(.*)") ||
+                            messageFromChat.matches("^Username:(.*)")
                         ){
                             System.out.print(messageFromChat);
+                        }
+                        else if (messageFromChat.matches("^Inactivity(.*)")){
+                            System.out.println(messageFromChat);
+                            closeEverything(socket, bufferedReader, bufferedWriter);
                         }
                         else{
                             System.out.println(messageFromChat);

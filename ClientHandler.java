@@ -1,7 +1,11 @@
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+
+import jdk.vm.ci.meta.Local;
+
 import java.time.LocalTime;
+import static java.time.temporal.ChronoUnit.SECONDS;;
 
 public class ClientHandler implements Runnable {
     public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
@@ -32,7 +36,7 @@ public class ClientHandler implements Runnable {
     public void run() {
         String message;
 
-        while (socket.isConnected()){
+        while (socket.isConnected() && !socket.isClosed()){
             try{
                 // Login
                 if (clientLoggedIn == false){
@@ -51,8 +55,11 @@ public class ClientHandler implements Runnable {
                         account = createNewAccount(userNameInput, passwordInput);
                         account.setLoggedIn(true);
                         account.setActiveSocket(socket);
+                        account.setLastValidCommand(LocalTime.now());
                         clientLoggedIn = true;
                         sendMessage("Welcome to the greatest messaging application ever!");
+                        broadcastMessage("logged in");
+
                     }
                     // login into existing account
                     else{
@@ -79,7 +86,9 @@ public class ClientHandler implements Runnable {
                                     activeBlockout = false;
                                     account.setLoggedIn(true);
                                     account.setActiveSocket(socket);
+                                    account.setLastValidCommand(LocalTime.now());
                                     sendMessage("Welcome to the greatest messaging application ever!");
+                                    broadcastMessage("logged in");
                                     clientLoggedIn = true;
                                     break;
                                 }
@@ -96,36 +105,47 @@ public class ClientHandler implements Runnable {
                     }
                 }
                 else{
-                    LocalTime timeOutTimer = LocalTime.now();
-                    boolean timedOut = true;
-                    System.out.println("waiting");
-                    while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
-                        if (bufferedReader.ready()) {
-                            timedOut = false;
-                            break;
-                        }
-                    }
-                    if (timedOut){
-                        sendMessage("Inactivity Detected. Please login again. After: " + server.getTimeOut() + " seconds");
+                    // LocalTime timeOutTime = LocalTime.now();
+                    // boolean timedOut = true;
+                    // System.out.println("waiting");
+                    // while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
+                    //     if (bufferedReader.ready()) {
+                    //         timedOut = false;
+                    //         break;
+                    //     }
+                    // }
+
+                    if (SECONDS.between(account.getLastValidCommand(), LocalTime.now()) > server.getTimeOut()){
+                        sendMessage("Inactivity Detected. Please login again. After: " + server.getTimeOut() + " seconds. Press enter to quit");
                         System.out.println("inactivity msg sent");
                         account.setLoggedIn(false);
                         account.setActiveSocket(null);
-                        clientLoggedIn = false;
+                        // clientLoggedIn = false;
+                        closeEverything(socket, bufferedReader, bufferedWriter);
                     }
                     else{
                         // System.out.println("Awaiting messages");
                         message = bufferedReader.readLine();
                         if (message.equals("logout")){
                             account.setLoggedIn(false);
-                            System.out.println(account.getUsername() + " has logged out");
+                            account.setLastValidCommand(null);
+                            System.out.println(account.getUsername() +  " logged out");
                             closeEverything(socket, bufferedReader, bufferedWriter);
                         }
-                        broadcastMessage(message);
+                        else if (message.matches("^broadcast (.*)")){
+                            message = message.split(" ",2)[1];
+                            broadcastMessage(message);
+                            account.setLastValidCommand(LocalTime.now());
+                        }
+                        else{
+                            sendMessage("Error. Invalid command");
+                            System.out.println(account.getUsername() + " Unknown request");
+                        }
                     }
                 }
             }
             catch (IOException e){
-                //e.printStackTrace();
+                e.printStackTrace();
                 closeEverything(socket, bufferedReader, bufferedWriter);
                 break;
             }
@@ -167,8 +187,14 @@ public class ClientHandler implements Runnable {
     public void broadcastMessage(String message){
         for (ClientHandler clientHandler : clientHandlers){
             try{
+                // don't send to self or client not logged in
                 if (clientHandler.account != null && !clientHandler.account.getUsername().equals(this.account.getUsername())){
-                    clientHandler.bufferedWriter.write(this.account.getUsername() + ": " + message);
+                    if (message.matches("^logged out$") || message.matches("^logged in$")){
+                        clientHandler.bufferedWriter.write(this.account.getUsername() + " " + message);
+                    }
+                    else{
+                        clientHandler.bufferedWriter.write(this.account.getUsername() + ": " + message);
+                    }
                     clientHandler.bufferedWriter.newLine();
                     clientHandler.bufferedWriter.flush();
                 }
@@ -181,7 +207,8 @@ public class ClientHandler implements Runnable {
 
     public void removeClientHandler(){
         clientHandlers.remove(this);
-        broadcastMessage(account.getUsername() +  " has left the chat");
+        System.out.println("removing client");
+        broadcastMessage("logged out");
     }
 
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
