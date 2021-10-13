@@ -96,14 +96,32 @@ public class ClientHandler implements Runnable {
                     }
                 }
                 else{
-                    // System.out.println("Awaiting messages");
-                    message = bufferedReader.readLine();
-                    if (message.equals("logout")){
-                        account.setLoggedIn(false);
-                        System.out.println(account.getUsername() + " has logged out");
-                        closeEverything(socket, bufferedReader, bufferedWriter);
+                    LocalTime timeOutTimer = LocalTime.now();
+                    boolean timedOut = true;
+                    System.out.println("waiting");
+                    while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
+                        if (bufferedReader.ready()) {
+                            timedOut = false;
+                            break;
+                        }
                     }
-                    broadcastMessage(message);
+                    if (timedOut){
+                        sendMessage("Inactivity Detected. Please login again. After: " + server.getTimeOut() + " seconds");
+                        System.out.println("inactivity msg sent");
+                        account.setLoggedIn(false);
+                        account.setActiveSocket(null);
+                        clientLoggedIn = false;
+                    }
+                    else{
+                        // System.out.println("Awaiting messages");
+                        message = bufferedReader.readLine();
+                        if (message.equals("logout")){
+                            account.setLoggedIn(false);
+                            System.out.println(account.getUsername() + " has logged out");
+                            closeEverything(socket, bufferedReader, bufferedWriter);
+                        }
+                        broadcastMessage(message);
+                    }
                 }
             }
             catch (IOException e){
@@ -149,8 +167,8 @@ public class ClientHandler implements Runnable {
     public void broadcastMessage(String message){
         for (ClientHandler clientHandler : clientHandlers){
             try{
-                if (!clientHandler.account.getUsername().equals(this.account.getUsername())){
-                    clientHandler.bufferedWriter.write(message);
+                if (clientHandler.account != null && !clientHandler.account.getUsername().equals(this.account.getUsername())){
+                    clientHandler.bufferedWriter.write(this.account.getUsername() + ": " + message);
                     clientHandler.bufferedWriter.newLine();
                     clientHandler.bufferedWriter.flush();
                 }
@@ -163,7 +181,7 @@ public class ClientHandler implements Runnable {
 
     public void removeClientHandler(){
         clientHandlers.remove(this);
-        broadcastMessage("SERVER: " + account.getUsername() +  "has left the chat");
+        broadcastMessage(account.getUsername() +  " has left the chat");
     }
 
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
