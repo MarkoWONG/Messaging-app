@@ -1,109 +1,104 @@
-/*
- * Java socket programming client example with TCP
- * socket programming at the client side, which provides example of how to define client socket, how to send message to
- * the server and get response from the server with DataInputStream and DataOutputStream
- *
- * Author: Marko Wong
- * Date: 2021-10-10
- * */
-
-import java.net.*;
-import java.io.*;
-
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
+import java.util.Scanner;
 
 public class Client {
-    // server host and port number, which would be acquired from command line parameter
-    private static String serverHost;
-    private static Integer serverPort;
+    private Socket socket;
+    private BufferedReader bufferedReader;
+    private BufferedWriter bufferedWriter;
 
-    public static void main(String[] args) throws IOException {
-        if (args.length != 2) {
-            System.out.println("===== Error usage: java TCPClient SERVER_IP SERVER_PORT =====");
-            return;
+    public Client(Socket socket){
+        try{
+            this.socket = socket;
+            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         }
-
-        serverHost = args[0];
-        serverPort = Integer.parseInt(args[1]);
-
-        // define socket for client
-        Socket clientSocket = new Socket(serverHost, serverPort);
-
-        // define DataInputStream instance which would be used to receive response from the server
-        // define DataOutputStream instance which would be used to send message to the server
-        DataInputStream dataInputStream = new DataInputStream(clientSocket.getInputStream());
-        DataOutputStream dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
-
-        // define a BufferedReader to get input from command line i.e., standard input from keyboard
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        
-        Boolean clientAlive = true;
-
-        // Start Another Thread for listening to messages
-        ListeningThread listeningThread = new ListeningThread(clientSocket);
-        listeningThread.start();
-
-        while (clientAlive) {
-            // login
-            String responseMessage = (String) dataInputStream.readUTF();
-            if (responseMessage.equals("Username: ")){
-                System.out.print("[recv] " + responseMessage);
-                String userNameInput = reader.readLine();
-                dataOutputStream.writeUTF(userNameInput);
-                dataOutputStream.flush();
-            }
-            else if (responseMessage.matches("(.*)Incorrect Password(.*)")){
-                System.out.println("[recv] " + responseMessage);
-            }
-            else if (responseMessage.matches("(.*)[Pp]assword(.*)")){
-                System.out.print("[recv] " + responseMessage);
-                String passwordInput = reader.readLine();
-                dataOutputStream.writeUTF(passwordInput);
-                dataOutputStream.flush();
-            }
-            else if (responseMessage.matches("(.*)blocked(.*)")){
-                System.out.println("[recv] " + responseMessage);
-                System.out.println("Good bye");
-                clientSocket.close();
-                dataOutputStream.close();
-                dataInputStream.close();
-                clientAlive = false;
-            }
-            else if (responseMessage.matches("(.*)Awaiting Commands(.*)")){
-                // receive the server response from dataInputStream
-                System.out.println("[recv] " + responseMessage);
-                // read input from command line
-                String message = reader.readLine();
-
-                // write message into dataOutputStream and send/flush to the server
-                dataOutputStream.writeUTF(message);
-                dataOutputStream.flush();
-                if (message.equals("logout")){
-                    clientAlive = false;
-                }
-            }
-            else{
-                System.out.println("[recv] " + responseMessage);
-            }
+        catch (IOException e){
+            closeEverything(socket, bufferedReader, bufferedWriter);
         }
     }
 
-    // define ClientThread for handling multi-threading issue
-    // ClientThread needs to extend Thread and override run() method
-    private static class ListeningThread extends Thread {
-        private final Socket clientSocket;
+    public void sendMessage(){
+        Scanner scanner = new Scanner(System.in);
+        try{
+            // bufferedWriter.write(username);
+            // bufferedWriter.newLine();
+            // bufferedWriter.flush();
 
-        ListeningThread(Socket clientSocket) {
-            this.clientSocket = clientSocket;
-        }
-
-        @Override
-        public void run() {
-            super.run();
-            String message;
-            while (clientAlive){
-                    String responseMessage = (String) dataInputStream.readUTF();
-                    System.out.println("[recv] " + responseMessage);
+            while (socket.isConnected() && !socket.isClosed() ){
+                String message = scanner.nextLine();
+                bufferedWriter.write(message);
+                bufferedWriter.newLine();
+                bufferedWriter.flush();
+                if (message.equals("logout")){
+                    System.out.println("logging out");
+                    closeEverything(socket, bufferedReader, bufferedWriter);
+                }
             }
         }
+        catch (IOException e){
+            scanner.close();
+            closeEverything(socket, bufferedReader, bufferedWriter);
+        }
+    }
+
+    public void listenForMessage(){
+        new Thread(new Runnable(){
+            @Override
+            public void run(){
+                String messageFromChat;
+
+                while(socket.isConnected() && !socket.isClosed() ){
+                    try{
+                        messageFromChat = bufferedReader.readLine();
+                        if (
+                            messageFromChat.matches("(.*)[Pp]assword:(.*)") ||
+                            messageFromChat.matches("(.*)Username:(.*)")
+                        ){
+                            System.out.print(messageFromChat);
+                        }
+                        else{
+                            System.out.println(messageFromChat);
+                        }
+                    }
+                    catch(IOException e){
+                        closeEverything(socket, bufferedReader, bufferedWriter);
+                    }
+                    catch(NullPointerException e){
+                        closeEverything(socket, bufferedReader, bufferedWriter);
+                    }
+                }
+            }
+        }).start();
+    }
+
+    public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
+        try{
+            if (bufferedReader != null){
+                bufferedReader.close();
+            }
+            if (bufferedWriter != null){
+                bufferedWriter.close();
+            }
+            if (socket != null){
+                socket.close();
+            }
+        }
+        catch (IOException e){
+            //e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        Scanner scanner = new Scanner(System.in);
+        Socket socket = new Socket("localhost", 8000);
+        Client client = new Client(socket);
+        client.listenForMessage();
+        client.sendMessage();
+        scanner.close();
     }
 }
