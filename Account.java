@@ -8,7 +8,7 @@ public class Account {
     private String username, password;
     private boolean loggedIn;
     private LocalTime lockedOutFinishTime;
-    private LocalTime lastValidCommand;
+    // private LocalTime lastValidCommand;
     private List<Account> blockedAccounts;
     private Socket activeSocket;
 
@@ -55,13 +55,13 @@ public class Account {
         this.lockedOutFinishTime = lockedOutFinishTime;
     }
 
-    public LocalTime getLastValidCommand() {
-        return this.lastValidCommand;
-    }
+    // public LocalTime getLastValidCommand() {
+    //     return this.lastValidCommand;
+    // }
 
-    public void setLastValidCommand(LocalTime lastValidCommand) {
-        this.lastValidCommand = lastValidCommand;
-    }
+    // public void setLastValidCommand(LocalTime lastValidCommand) {
+    //     this.lastValidCommand = lastValidCommand;
+    // }
     
     public List<Account> getBlockedAccounts() {
         return this.blockedAccounts;

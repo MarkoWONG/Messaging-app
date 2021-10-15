@@ -1,11 +1,10 @@
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
-
-import jdk.vm.ci.meta.Local;
-
+import java.util.List;
 import java.time.LocalTime;
-import static java.time.temporal.ChronoUnit.SECONDS;;
+import java.util.Arrays;
+// import static java.time.temporal.ChronoUnit.SECONDS;;
 
 public class ClientHandler implements Runnable {
     public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
@@ -15,6 +14,10 @@ public class ClientHandler implements Runnable {
     private Account account;
     private Server server;
     private boolean clientLoggedIn;
+    private List<String> validCommands = Arrays.asList(
+                                            "message", "broadcast", "whoelse", 
+                                            "whoelsesince", "block", "unblock",
+                                            "logout");;
 
     public ClientHandler(Server server, Socket socket){
         try{
@@ -22,10 +25,8 @@ public class ClientHandler implements Runnable {
             this.socket = socket;
             this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            //this.clientUsername = bufferedReader.readLine();
             clientHandlers.add(this);
             this.clientLoggedIn = false;
-            //broadcastMessage("SERVER: " + clientUsername + "has entered the chat");
         }
         catch (IOException e){
             closeEverything(socket, bufferedReader, bufferedWriter);
@@ -34,7 +35,7 @@ public class ClientHandler implements Runnable {
 
     @Override
     public void run() {
-        String message;
+        String message = "";
 
         while (socket.isConnected() && !socket.isClosed()){
             try{
@@ -55,7 +56,6 @@ public class ClientHandler implements Runnable {
                         account = createNewAccount(userNameInput, passwordInput);
                         account.setLoggedIn(true);
                         account.setActiveSocket(socket);
-                        account.setLastValidCommand(LocalTime.now());
                         clientLoggedIn = true;
                         sendMessage("Welcome to the greatest messaging application ever!");
                         broadcastMessage("logged in");
@@ -86,7 +86,6 @@ public class ClientHandler implements Runnable {
                                     activeBlockout = false;
                                     account.setLoggedIn(true);
                                     account.setActiveSocket(socket);
-                                    account.setLastValidCommand(LocalTime.now());
                                     sendMessage("Welcome to the greatest messaging application ever!");
                                     broadcastMessage("logged in");
                                     clientLoggedIn = true;
@@ -105,37 +104,41 @@ public class ClientHandler implements Runnable {
                     }
                 }
                 else{
-                    // LocalTime timeOutTime = LocalTime.now();
-                    // boolean timedOut = true;
-                    // System.out.println("waiting");
-                    // while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
-                    //     if (bufferedReader.ready()) {
-                    //         timedOut = false;
-                    //         break;
-                    //     }
-                    // }
-
-                    if (SECONDS.between(account.getLastValidCommand(), LocalTime.now()) > server.getTimeOut()){
+                    LocalTime timeOutTimer = LocalTime.now();
+                    boolean timedOut = true;
+                    System.out.println("waiting");
+                    while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
+                        if (bufferedReader.ready()) {
+                            message = bufferedReader.readLine();
+                            String command = message.split(" ",2)[0];
+                            System.out.println("comparing ["+ command+"]");
+                            if (validCommands.contains(command)){
+                                timedOut = false;
+                                break;
+                            }
+                            else{
+                                sendMessage("Error. Invalid command");
+                            }
+                        }
+                    }
+                    if (timedOut){
                         sendMessage("Inactivity Detected. Please login again. After: " + server.getTimeOut() + " seconds. Press enter to quit");
                         System.out.println("inactivity msg sent");
                         account.setLoggedIn(false);
                         account.setActiveSocket(null);
-                        // clientLoggedIn = false;
+                        clientLoggedIn = false;
                         closeEverything(socket, bufferedReader, bufferedWriter);
                     }
                     else{
-                        // System.out.println("Awaiting messages");
-                        message = bufferedReader.readLine();
+                        //message = bufferedReader.readLine();
                         if (message.equals("logout")){
                             account.setLoggedIn(false);
-                            account.setLastValidCommand(null);
                             System.out.println(account.getUsername() +  " logged out");
                             closeEverything(socket, bufferedReader, bufferedWriter);
                         }
                         else if (message.matches("^broadcast (.*)")){
                             message = message.split(" ",2)[1];
                             broadcastMessage(message);
-                            account.setLastValidCommand(LocalTime.now());
                         }
                         else{
                             sendMessage("Error. Invalid command");
