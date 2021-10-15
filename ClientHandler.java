@@ -125,7 +125,7 @@ public class ClientHandler implements Runnable {
     private void commandHandler(String message) throws IOException{
         LocalTime timeOutTimer = LocalTime.now();
         boolean timedOut = true;
-        System.out.println("waiting");
+        System.out.println(account.getUsername() + "'s Timer (Re)Started At " + LocalTime.now().toString());
         while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
             if (bufferedReader.ready()) {
                 message = bufferedReader.readLine();
@@ -217,7 +217,6 @@ public class ClientHandler implements Runnable {
 
     public void removeClientHandler(){
         clientHandlers.remove(this);
-        System.out.println("removing client");
         broadcastMessage("logged out");
     }
 
