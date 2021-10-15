@@ -117,57 +117,10 @@ public class ClientHandler implements Runnable {
     private void loginSuccessful(){
         account.setLoggedIn(true);
         account.setActiveSocket(socket);
+        account.setLastLoginTime(LocalTime.now());
         sendMessage("Welcome to the greatest messaging application ever!");
         broadcastMessage("logged in");
         clientLoggedIn = true;
-    }
-
-    private void commandHandler(String message) throws IOException{
-        LocalTime timeOutTimer = LocalTime.now();
-        boolean timedOut = true;
-        System.out.println(account.getUsername() + "'s Timer (Re)Started At " + LocalTime.now().toString());
-        while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
-            if (bufferedReader.ready()) {
-                message = bufferedReader.readLine();
-                String command = message.split(" ",2)[0];
-                if (validCommands.contains(command)){
-                    timedOut = false;
-                    break;
-                }
-                else{
-                    sendMessage("Error. Invalid command");
-                }
-            }
-        }
-        if (timedOut){
-            sendMessage("Inactivity Detected. Please login again. After: " + server.getTimeOut() + " seconds. Press enter to quit");
-            System.out.println("inactivity msg sent");
-            closeEverything(socket, bufferedReader, bufferedWriter);
-        }
-        else{
-            if (message.equals("logout")){
-                System.out.println(account.getUsername() +  " logged out");
-                closeEverything(socket, bufferedReader, bufferedWriter);
-            }
-            else if (message.matches("^broadcast (.*)")){
-                message = message.split(" ",2)[1];
-                broadcastMessage(message);
-            }
-            else{
-                sendMessage("Error. Invalid command");
-                System.out.println(account.getUsername() + " Unknown request");
-            }
-        }
-    }
-    private void sendMessage(String message){
-        try{
-            bufferedWriter.write(message);
-            bufferedWriter.newLine();
-            bufferedWriter.flush();
-        }
-        catch (IOException e){
-            closeEverything(socket, bufferedReader, bufferedWriter);
-        }
     }
 
     /**
@@ -191,7 +144,64 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    public void broadcastMessage(String message){
+    private void commandHandler(String message) throws IOException{
+        LocalTime timeOutTimer = LocalTime.now();
+        boolean timedOut = true;
+        // Time out logic
+        System.out.println(account.getUsername() + "'s Timer (Re)Started At " + LocalTime.now().toString());
+        while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
+            if (bufferedReader.ready()) {
+                message = bufferedReader.readLine();
+                String command = message.split(" ",2)[0];
+                if (validCommands.contains(command)){
+                    timedOut = false;
+                    break;
+                }
+                else{
+                    sendMessage("Error. Invalid command");
+                }
+            }
+        }
+        if (timedOut){
+            sendMessage("Inactivity Detected, " + server.getTimeOut() +" since last command. Please login again. Press enter to quit");
+            System.out.println("inactivity msg sent");
+            closeEverything(socket, bufferedReader, bufferedWriter);
+        }
+        // Valid Commands
+        else{
+            if (message.equals("logout")){
+                System.out.println(account.getUsername() +  " logged out");
+                closeEverything(socket, bufferedReader, bufferedWriter);
+            }
+            else if (message.matches("^broadcast (.*)")){
+                message = message.split(" ",2)[1];
+                broadcastMessage(message);
+            }
+            else if (message.matches("^whoelsesince (.*)")){
+                Integer time = Integer.parseInt(message.split(" ",2)[1]);
+                whoelsesince(time);
+            }
+            else if (message.matches("^whoelse(.*)")){
+                whoelse();
+            }
+            else{
+                sendMessage("Error. Invalid command");
+                System.out.println(account.getUsername() + " Unknown request");
+            }
+        }
+    }
+    private void sendMessage(String message){
+        try{
+            bufferedWriter.write(message);
+            bufferedWriter.newLine();
+            bufferedWriter.flush();
+        }
+        catch (IOException e){
+            closeEverything(socket, bufferedReader, bufferedWriter);
+        }
+    }
+
+    private void broadcastMessage(String message){
         for (ClientHandler clientHandler : clientHandlers){
             try{
                 // don't send to self or client not logged in
@@ -215,10 +225,26 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    public void removeClientHandler(){
-        clientHandlers.remove(this);
-        broadcastMessage("logged out");
+    private void whoelse() {
+        for (Account acc : server.getAccounts()){
+            if (acc.getLoggedIn() && acc != account){
+                sendMessage(acc.getUsername());
+            }
+        }
     }
+
+    private void whoelsesince(int time) {
+        for (Account acc : server.getAccounts()){
+            if (
+                acc != account && 
+                acc.getLastLoginTime() != null && 
+                acc.getLastLoginTime().compareTo(LocalTime.now().minusSeconds(time)) > 0
+            ){
+                sendMessage(acc.getUsername());
+            }
+        }
+    }
+
 
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
         removeClientHandler();
@@ -239,5 +265,9 @@ public class ClientHandler implements Runnable {
         catch (IOException e){
             e.printStackTrace();
         }
+    }
+    private void removeClientHandler(){
+        clientHandlers.remove(this);
+        broadcastMessage("logged out");
     }
 }

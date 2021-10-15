@@ -11,6 +11,7 @@ public class Account {
     private LocalTime lockedOutFinishTime;
     private List<Account> blockedAccounts;
     private Socket activeSocket;
+    private LocalTime lastLoginTime;
 
     // Constructor
     public Account(String username, String password){
@@ -69,6 +70,14 @@ public class Account {
 
     public void setActiveSocket(Socket activeSocket) {
         this.activeSocket = activeSocket;
+    }
+
+    public LocalTime getLastLoginTime() {
+        return this.lastLoginTime;
+    }
+
+    public void setLastLoginTime(LocalTime lastLoginTime) {
+        this.lastLoginTime = lastLoginTime;
     }
     
 }
