@@ -2,6 +2,9 @@ import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+
+import jdk.javadoc.doclet.Taglet;
+
 import java.time.LocalTime;
 import java.util.Arrays;
 // import static java.time.temporal.ChronoUnit.SECONDS;;
@@ -14,10 +17,7 @@ public class ClientHandler implements Runnable {
     private Account account;
     private Server server;
     private boolean clientLoggedIn;
-    private List<String> validCommands = Arrays.asList(
-                                            "message", "broadcast", "whoelse", 
-                                            "whoelsesince", "block", "unblock",
-                                            "logout");;
+    
 
     public ClientHandler(Server server, Socket socket){
         try{
@@ -152,8 +152,8 @@ public class ClientHandler implements Runnable {
         while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
             if (bufferedReader.ready()) {
                 message = bufferedReader.readLine();
-                String command = message.split(" ",2)[0];
-                if (validCommands.contains(command)){
+                // String command = message.split(" ",2)[0];
+                if (checkCommand(message)){
                     timedOut = false;
                     break;
                 }
@@ -181,8 +181,12 @@ public class ClientHandler implements Runnable {
                 Integer time = Integer.parseInt(message.split(" ",2)[1]);
                 whoelsesince(time);
             }
-            else if (message.matches("^whoelse(.*)")){
+            else if (message.matches("^whoelse")){
                 whoelse();
+            }
+            else if (message.matches("^message (.*)")){
+                message = message.split(" ",2)[1];
+                messagePerson(message);
             }
             else{
                 sendMessage("Error. Invalid command");
@@ -190,6 +194,73 @@ public class ClientHandler implements Runnable {
             }
         }
     }
+
+    private boolean checkCommand(String msg){
+        // whoelsesince message needs to be a number
+        if (msg.matches("^whoelsesince (.+)")){
+            try {
+                Integer.parseInt(msg.split(" ",2)[1]);
+                return true;
+            }
+            catch (NumberFormatException e){
+                return false;
+            }
+        }
+        else if (msg.matches("^message (.+) (.+)")){
+            String userName = msg.split(" ",3)[1];
+            if (existingUser(userName) != null){
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
+        else if (msg.matches("^block (.+)")){
+            String userName = msg.split(" ",2)[1];
+            if (existingUser(userName) != null){
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
+        else if (msg.matches("^unblock (.+)")){
+            String userName = msg.split(" ",2)[1];
+            if (existingUser(userName) != null && !userInBlockList(userName)){
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
+        // no further check required beside the regex (logout, broadcast, whoelse)
+        else if (msg.matches("^logout$") || msg.matches("^broadcast (.+)") || msg.matches("^whoelse$")){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+    
+    private Account existingUser(String userName){
+        for (Account acc : server.getAccounts()){
+            if (acc.getUsername().equals(userName)){
+                return acc;
+            }
+        }
+        return null;
+    }
+
+    private boolean userInBlockList(String userName) {
+        // TODO: When implmenting blocking users
+        // for (Account acc : account.getBlockedList()){
+        //     if (acc.getUsername().equals(userName)){
+        //         return true;
+        //     }
+        // }
+        return false;
+    }
+        
     private void sendMessage(String message){
         try{
             bufferedWriter.write(message);
@@ -242,6 +313,26 @@ public class ClientHandler implements Runnable {
             ){
                 sendMessage(acc.getUsername());
             }
+        }
+    }
+
+    private void messagePerson(String msg){
+        String targetName = msg.split(" ", 2)[0];
+        String message = msg.split(" ", 2)[1];
+        Account target = existingUser(targetName);
+        try{
+            // don't send to self or client not logged in
+            for (ClientHandler clientHandler : clientHandlers){
+                if (clientHandler.account == target){
+                    clientHandler.bufferedWriter.write(this.account.getUsername() + ": " + message);
+                    clientHandler.bufferedWriter.newLine();
+                    clientHandler.bufferedWriter.flush();
+                }
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+            closeEverything(socket, bufferedReader, bufferedWriter);
         }
     }
 
