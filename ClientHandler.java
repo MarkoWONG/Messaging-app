@@ -1,12 +1,10 @@
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
-
-import jdk.javadoc.doclet.Taglet;
+// import java.util.List;
 
 import java.time.LocalTime;
-import java.util.Arrays;
+// import java.util.Arrays;
 // import static java.time.temporal.ChronoUnit.SECONDS;;
 
 public class ClientHandler implements Runnable {
@@ -116,8 +114,8 @@ public class ClientHandler implements Runnable {
 
     private void loginSuccessful(){
         account.setLoggedIn(true);
-        account.setActiveSocket(socket);
         account.setLastLoginTime(LocalTime.now());
+        account.setActiveClient(this);
         sendMessage("Welcome to the greatest messaging application ever!");
         broadcastMessage("logged in");
         clientLoggedIn = true;
@@ -208,7 +206,7 @@ public class ClientHandler implements Runnable {
         }
         else if (msg.matches("^message (.+) (.+)")){
             String userName = msg.split(" ",3)[1];
-            if (existingUser(userName) != null){
+            if (existingUser(userName) != null && !userName.equals(account.getUsername())){
                 return true;
             }
             else{
@@ -322,13 +320,14 @@ public class ClientHandler implements Runnable {
         Account target = existingUser(targetName);
         try{
             // don't send to self or client not logged in
-            for (ClientHandler clientHandler : clientHandlers){
-                if (clientHandler.account == target){
-                    clientHandler.bufferedWriter.write(this.account.getUsername() + ": " + message);
-                    clientHandler.bufferedWriter.newLine();
-                    clientHandler.bufferedWriter.flush();
-                }
-            }
+            // for (ClientHandler clientHandler : clientHandlers){
+            //     if (clientHandler.account == target){
+            //         clientHandler.bufferedWriter.write(this.account.getUsername() + ": " + message);
+            //         clientHandler.bufferedWriter.newLine();
+            //         clientHandler.bufferedWriter.flush();
+            //     }
+            // }
+            target.getActiveClient().bufferedWriter
         }
         catch (IOException e){
             e.printStackTrace();
@@ -339,7 +338,7 @@ public class ClientHandler implements Runnable {
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
         removeClientHandler();
         account.setLoggedIn(false);
-        account.setActiveSocket(null);
+        account.setActiveClient(null);
         clientLoggedIn = false;
         try{
             if (bufferedReader != null){

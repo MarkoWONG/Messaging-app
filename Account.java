@@ -10,8 +10,8 @@ public class Account {
     private boolean loggedIn;
     private LocalTime lockedOutFinishTime;
     private List<Account> blockedAccounts;
-    private Socket activeSocket;
     private LocalTime lastLoginTime;
+    private ClientHandler activeClient;
 
     // Constructor
     public Account(String username, String password){
@@ -20,6 +20,7 @@ public class Account {
         this.loggedIn = false;
         this.blockedAccounts = new ArrayList<>();
         this.lockedOutFinishTime = LocalTime.now();
+        this.activeClient = null;
     }
 
 
@@ -64,14 +65,6 @@ public class Account {
         this.blockedAccounts = blockedAccounts;
     }
 
-    public Socket getActiveSocket() {
-        return this.activeSocket;
-    }
-
-    public void setActiveSocket(Socket activeSocket) {
-        this.activeSocket = activeSocket;
-    }
-
     public LocalTime getLastLoginTime() {
         return this.lastLoginTime;
     }
@@ -79,5 +72,14 @@ public class Account {
     public void setLastLoginTime(LocalTime lastLoginTime) {
         this.lastLoginTime = lastLoginTime;
     }
+
+    public ClientHandler getActiveClient() {
+        return this.activeClient;
+    }
+
+    public void setActiveClient(ClientHandler activeClient) {
+        this.activeClient = activeClient;
+    }
+
     
 }
