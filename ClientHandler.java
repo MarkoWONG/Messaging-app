@@ -327,7 +327,16 @@ public class ClientHandler implements Runnable {
             //         clientHandler.bufferedWriter.flush();
             //     }
             // }
-            target.getActiveClient().bufferedWriter
+            ClientHandler TClient = target.getActiveClient();
+            if (TClient != null){
+                TClient.bufferedWriter.write(this.account.getUsername() + ": " + message);
+                TClient.bufferedWriter.newLine();
+                TClient.bufferedWriter.flush();
+            }
+            // offline messenging: store messenges in account then sent it all when user logs in
+            else{
+                
+            }
         }
         catch (IOException e){
             e.printStackTrace();
