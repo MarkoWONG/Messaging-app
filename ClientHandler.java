@@ -70,18 +70,19 @@ public class ClientHandler implements Runnable {
 
             // create new entry for new account
             account = createNewAccount(userNameInput, passwordInput);
-            loginSuccessful();
+            loginSuccessful(account);
         }
         // login into existing account
         else{
-            account = server.findAccount(userNameInput);
+            Account loggingInAccount = server.findAccount(userNameInput);
             // Allow only one connection to each account
-            if (account.getLoggedIn()){
+            if (loggingInAccount.getLoggedIn()){
                 sendMessage(userNameInput + " is already in use. Please use another account.");
             }
             // Check if account is locked out
-            else if ( LocalTime.now().compareTo(account.getLockedOutFinishTime()) < 0){
-                sendMessage("Your account is blocked due to multiple login failures. Please try again after: " + server.getBlockOut() + " seconds");
+            else if ( LocalTime.now().compareTo(loggingInAccount.getLockedOutFinishTime()) < 0){
+                sendMessage("Your account is blocked due to multiple login failures. Please try again after: " + server.getBlockOut() + " seconds. Press Enter to quit");
+                closeEverything(socket, bufferedReader, bufferedWriter);
             }
             // account is not locked out
             else {
@@ -95,7 +96,7 @@ public class ClientHandler implements Runnable {
                     //correct password
                     if (server.checkPassword(userNameInput, passwordInput)){
                         activeBlockout = false;
-                        loginSuccessful();
+                        loginSuccessful(loggingInAccount);
                         
                         break;
                     }
@@ -105,14 +106,17 @@ public class ClientHandler implements Runnable {
                 }
                 if (activeBlockout){
                     // Lock up the account
-                    sendMessage("Your account is blocked due to multiple login failures. Please try again after: " + server.getBlockOut() + " seconds");
-                    account.setLockedOutFinishTime(LocalTime.now().plusSeconds(server.getBlockOut()));
+                    sendMessage("Your account is blocked due to multiple login failures. Please try again after: " + server.getBlockOut() + " seconds. Press Enter to quit");
+                    loggingInAccount.setLockedOutFinishTime(LocalTime.now().plusSeconds(server.getBlockOut()));
+                    closeEverything(socket, bufferedReader, bufferedWriter);
                 }
             }
         }
     }
 
-    private void loginSuccessful(){
+    private void loginSuccessful(Account acc){
+        // set the client account to the logging in account as the client now has an account
+        account = acc;
         account.setLoggedIn(true);
         account.setLastLoginTime(LocalTime.now());
         account.setActiveClient(this);
@@ -121,13 +125,12 @@ public class ClientHandler implements Runnable {
         clientLoggedIn = true;
         //print all offline messages if there is any
         if (account.getOfflineMsgs().size() != 0){
-            sendMessage("Messages you missed when your're offline [");
+            sendMessage("Messages you missed when your're offline:");
             for (String msg : account.getOfflineMsgs()){
                 sendMessage(msg);
             }
             // remove all offline messages
             account.getOfflineMsgs().clear();
-            sendMessage("] End of missed messages");
         }
     }
 
@@ -165,14 +168,13 @@ public class ClientHandler implements Runnable {
                     timedOut = false;
                     break;
                 }
-                else{
-                    sendMessage("Error. Invalid command");
-                }
+                // else{
+                //     sendMessage("Error. Invalid command");
+                // }
             }
         }
         if (timedOut){
             sendMessage("Inactivity Detected, " + server.getTimeOut() +" since last command. Please login again. Press enter to quit");
-            System.out.println("inactivity msg sent");
             closeEverything(socket, bufferedReader, bufferedWriter);
         }
         // Valid Commands
@@ -219,6 +221,7 @@ public class ClientHandler implements Runnable {
                 return true;
             }
             catch (NumberFormatException e){
+                sendMessage("Error. Time has to be a number");
                 return false;
             }
         }
@@ -228,24 +231,43 @@ public class ClientHandler implements Runnable {
                 return true;
             }
             else{
+                sendMessage("Error. Invalid user");
                 return false;
             }
         }
         else if (msg.matches("^block (.+)")){
             String userName = msg.split(" ",2)[1];
-            if (existingUser(userName) != null){
+            if (existingUser(userName) != null && !account.getUsername().equals(userName)){
                 return true;
             }
+            else if (existingUser(userName) == null){
+                sendMessage("Error. Invalid user");
+                return false;
+            }
+            else if (account.getUsername().equals(userName)){
+                sendMessage("Error. Cannot block self");
+                return false;
+            }
             else{
+                sendMessage("Error. Invalid command");
                 return false;
             }
         }
         else if (msg.matches("^unblock (.+)")){
             String userName = msg.split(" ",2)[1];
-            if (existingUser(userName) != null && !userInBlockList(userName, account.getBlockedAccounts())){
+            if (existingUser(userName) != null && userInBlockList(userName, account.getBlockedAccounts())){
                 return true;
             }
+            else if (existingUser(userName) == null){
+                sendMessage("Error. Invalid user");
+                return false;
+            }
+            else if (!userInBlockList(userName, account.getBlockedAccounts())){
+                sendMessage("Error. " + userName + " was not blocked");
+                return false;
+            }
             else{
+                sendMessage("Error. Invalid command");
                 return false;
             }
         }
@@ -254,6 +276,7 @@ public class ClientHandler implements Runnable {
             return true;
         }
         else{
+            sendMessage("Error. Invalid command");
             return false;
         }
     }
@@ -307,7 +330,7 @@ public class ClientHandler implements Runnable {
                     clientHandler.bufferedWriter.newLine();
                     clientHandler.bufferedWriter.flush();
                 }
-                else if (userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())){
+                else if (clientHandler.account != null && userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())){
                     blockedInEffect = true;
                 }
             }
@@ -367,11 +390,15 @@ public class ClientHandler implements Runnable {
     }
 
     private void blockAccount(String userName){
+        sendMessage(userName + " is blocked");
         Account target = existingUser(userName);
-        account.getBlockedAccounts().add(target);
+        if (!account.getBlockedAccounts().contains(target)){
+            account.getBlockedAccounts().add(target);
+        }
     }
 
     private void unblockAccount(String userName){
+        sendMessage(userName + " is unblocked");
         Account target = existingUser(userName);
         account.getBlockedAccounts().remove(target);
     }

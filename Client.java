@@ -32,7 +32,6 @@ public class Client {
                 bufferedWriter.newLine();
                 bufferedWriter.flush();
                 if (message.equals("logout")){
-                    System.out.println("logging out");
                     closeEverything(socket, bufferedReader, bufferedWriter);
                 }
             }
@@ -53,12 +52,16 @@ public class Client {
                     try{
                         messageFromChat = bufferedReader.readLine();
                         if (
-                            messageFromChat.matches("^[Pp]assword:(.*)") ||
+                            messageFromChat.matches("^Password:(.*)") ||
+                            messageFromChat.matches("^This is a new user(.*)") ||
                             messageFromChat.matches("^Username:(.*)")
                         ){
                             System.out.print(messageFromChat);
                         }
-                        else if (messageFromChat.matches("^Inactivity(.*)")){
+                        else if (
+                            messageFromChat.matches("^Inactivity(.*)") ||
+                            messageFromChat.matches("^Your account is blocked(.*)")
+                        ){
                             System.out.println(messageFromChat);
                             closeEverything(socket, bufferedReader, bufferedWriter);
                         }
