@@ -1,7 +1,7 @@
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
-// import java.util.List;
+import java.util.List;
 
 import java.time.LocalTime;
 // import java.util.Arrays;
@@ -196,6 +196,14 @@ public class ClientHandler implements Runnable {
                 message = message.split(" ",2)[1];
                 messagePerson(message);
             }
+            else if (message.matches("^block (.+)")){
+                message = message.split(" ", 2)[1];
+                blockAccount(message);
+            }
+            else if (message.matches("^unblock (.+)")){
+                message = message.split(" ", 2)[1];
+                unblockAccount(message);
+            }
             else{
                 sendMessage("Error. Invalid command");
                 System.out.println(account.getUsername() + " Unknown request");
@@ -234,7 +242,7 @@ public class ClientHandler implements Runnable {
         }
         else if (msg.matches("^unblock (.+)")){
             String userName = msg.split(" ",2)[1];
-            if (existingUser(userName) != null && !userInBlockList(userName)){
+            if (existingUser(userName) != null && !userInBlockList(userName, account.getBlockedAccounts())){
                 return true;
             }
             else{
@@ -259,13 +267,13 @@ public class ClientHandler implements Runnable {
         return null;
     }
 
-    private boolean userInBlockList(String userName) {
-        // TODO: When implmenting blocking users
-        // for (Account acc : account.getBlockedList()){
-        //     if (acc.getUsername().equals(userName)){
-        //         return true;
-        //     }
-        // }
+    //checks if the user is in the blocked list of this user
+    private boolean userInBlockList(String userName, List<Account> blockedList) {
+        for (Account acc : blockedList){
+            if (acc.getUsername().equals(userName)){
+                return true;
+            }
+        }
         return false;
     }
         
@@ -281,12 +289,14 @@ public class ClientHandler implements Runnable {
     }
 
     private void broadcastMessage(String message){
+        Boolean blockedInEffect = false;
         for (ClientHandler clientHandler : clientHandlers){
             try{
-                // don't send to self or client not logged in
+                // don't send to self or client not logged in or if the receiver is blocked
                 if (
                     clientHandler.account != null && 
-                    !clientHandler.account.getUsername().equals(this.account.getUsername())
+                    !clientHandler.account.getUsername().equals(this.account.getUsername()) &&
+                    !userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())
                 ){
                     if (message.matches("^logged out$") || message.matches("^logged in$")){
                         clientHandler.bufferedWriter.write(this.account.getUsername() + " " + message);
@@ -297,16 +307,22 @@ public class ClientHandler implements Runnable {
                     clientHandler.bufferedWriter.newLine();
                     clientHandler.bufferedWriter.flush();
                 }
+                else if (userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())){
+                    blockedInEffect = true;
+                }
             }
             catch (IOException e){
                 closeEverything(socket, bufferedReader, bufferedWriter);
             }
         }
+        if (blockedInEffect == true && !(message.matches("^logged out$") || message.matches("^logged in$"))){
+            sendMessage("Your message could not be delivered to some recipients");
+        }
     }
 
     private void whoelse() {
         for (Account acc : server.getAccounts()){
-            if (acc.getLoggedIn() && acc != account){
+            if (acc.getLoggedIn() && acc != account && !userInBlockList(account.getUsername(), acc.getBlockedAccounts()) ){
                 sendMessage(acc.getUsername());
             }
         }
@@ -316,6 +332,7 @@ public class ClientHandler implements Runnable {
         for (Account acc : server.getAccounts()){
             if (
                 acc != account && 
+                !userInBlockList(account.getUsername(), acc.getBlockedAccounts()) &&
                 acc.getLastLoginTime() != null && 
                 acc.getLastLoginTime().compareTo(LocalTime.now().minusSeconds(time)) > 0
             ){
@@ -330,10 +347,13 @@ public class ClientHandler implements Runnable {
         Account target = existingUser(targetName);
         try{
             ClientHandler TClient = target.getActiveClient();
-            if (TClient != null){
+            if (TClient != null && !userInBlockList(account.getUsername(), target.getBlockedAccounts())){
                 TClient.bufferedWriter.write(this.account.getUsername() + ": " + message);
                 TClient.bufferedWriter.newLine();
                 TClient.bufferedWriter.flush();
+            }
+            else if (userInBlockList(account.getUsername(), target.getBlockedAccounts())){
+                sendMessage("Your message could not be delivered as the recipient has blocked you");
             }
             // offline messenging: store messenges in account then sent it all when user logs in
             else{
@@ -344,6 +364,16 @@ public class ClientHandler implements Runnable {
             e.printStackTrace();
             closeEverything(socket, bufferedReader, bufferedWriter);
         }
+    }
+
+    private void blockAccount(String userName){
+        Account target = existingUser(userName);
+        account.getBlockedAccounts().add(target);
+    }
+
+    private void unblockAccount(String userName){
+        Account target = existingUser(userName);
+        account.getBlockedAccounts().remove(target);
     }
 
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
