@@ -119,6 +119,16 @@ public class ClientHandler implements Runnable {
         sendMessage("Welcome to the greatest messaging application ever!");
         broadcastMessage("logged in");
         clientLoggedIn = true;
+        //print all offline messages if there is any
+        if (account.getOfflineMsgs().size() != 0){
+            sendMessage("Messages you missed when your're offline [");
+            for (String msg : account.getOfflineMsgs()){
+                sendMessage(msg);
+            }
+            // remove all offline messages
+            account.getOfflineMsgs().clear();
+            sendMessage("] End of missed messages");
+        }
     }
 
     /**
@@ -319,14 +329,6 @@ public class ClientHandler implements Runnable {
         String message = msg.split(" ", 2)[1];
         Account target = existingUser(targetName);
         try{
-            // don't send to self or client not logged in
-            // for (ClientHandler clientHandler : clientHandlers){
-            //     if (clientHandler.account == target){
-            //         clientHandler.bufferedWriter.write(this.account.getUsername() + ": " + message);
-            //         clientHandler.bufferedWriter.newLine();
-            //         clientHandler.bufferedWriter.flush();
-            //     }
-            // }
             ClientHandler TClient = target.getActiveClient();
             if (TClient != null){
                 TClient.bufferedWriter.write(this.account.getUsername() + ": " + message);
@@ -335,7 +337,7 @@ public class ClientHandler implements Runnable {
             }
             // offline messenging: store messenges in account then sent it all when user logs in
             else{
-                
+                target.getOfflineMsgs().add(this.account.getUsername() + ": " + message);
             }
         }
         catch (IOException e){

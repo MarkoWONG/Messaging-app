@@ -11,6 +11,7 @@ public class Account {
     private List<Account> blockedAccounts;
     private LocalTime lastLoginTime;
     private ClientHandler activeClient;
+    private List<String> offlineMsgs;
 
     // Constructor
     public Account(String username, String password){
@@ -20,6 +21,7 @@ public class Account {
         this.blockedAccounts = new ArrayList<>();
         this.lockedOutFinishTime = LocalTime.now();
         this.activeClient = null;
+        this.offlineMsgs = new ArrayList<>();
     }
 
 
@@ -80,5 +82,12 @@ public class Account {
         this.activeClient = activeClient;
     }
 
+    public List<String> getOfflineMsgs() {
+        return this.offlineMsgs;
+    }
+
+    public void setOfflineMsgs(List<String> offlineMsgs) {
+        this.offlineMsgs = offlineMsgs;
+    }
     
 }
