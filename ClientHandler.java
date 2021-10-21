@@ -44,7 +44,6 @@ public class ClientHandler implements Runnable {
                 // execute commands from client once logged in
                 else{
                     commandHandler(message);
-                    
                 }
             }
             catch (IOException e){
@@ -168,9 +167,6 @@ public class ClientHandler implements Runnable {
                     timedOut = false;
                     break;
                 }
-                // else{
-                //     sendMessage("Error. Invalid command");
-                // }
             }
         }
         if (timedOut){
@@ -205,6 +201,10 @@ public class ClientHandler implements Runnable {
             else if (message.matches("^unblock (.+)")){
                 message = message.split(" ", 2)[1];
                 unblockAccount(message);
+            }
+            else if (message.matches("^startprivate (.+)")){
+                message = message.split(" ", 2)[1];
+                startPrivate(message);
             }
             else{
                 sendMessage("Error. Invalid command");
@@ -264,6 +264,37 @@ public class ClientHandler implements Runnable {
             }
             else if (!userInBlockList(userName, account.getBlockedAccounts())){
                 sendMessage("Error. " + userName + " was not blocked");
+                return false;
+            }
+            else{
+                sendMessage("Error. Invalid command");
+                return false;
+            }
+        }
+        else if (msg.matches("^startprivate (.+)")){
+            String userName = msg.split(" ",2)[1];
+            if (
+                existingUser(userName) != null && 
+                existingUser(userName).getLoggedIn() &&
+                !account.getUsername().equals(userName) &&
+                !userInBlockList(account.getUsername(), existingUser(userName).getBlockedAccounts())
+                ){
+                return true;
+            }
+            else if (existingUser(userName) == null){
+                sendMessage("Error. Invalid user");
+                return false;
+            }
+            else if (!existingUser(userName).getLoggedIn()){
+                sendMessage("Error. User is offline");
+                return false;
+            }
+            else if (account.getUsername().equals(userName)){
+                sendMessage("Error. Cannot privately message yourself");
+                return false;
+            }
+            else if (!userInBlockList(account.getUsername(), existingUser(userName).getBlockedAccounts())){
+                sendMessage("Error. " + userName + "has blocked you");
                 return false;
             }
             else{
@@ -401,6 +432,33 @@ public class ClientHandler implements Runnable {
         sendMessage(userName + " is unblocked");
         Account target = existingUser(userName);
         account.getBlockedAccounts().remove(target);
+    }
+
+    private void startPrivate(String userName){
+        Account target = existingUser(userName);
+        sendMessage("Start private messaging with " + userName);
+        try{
+            ClientHandler TClient = target.getActiveClient();
+            TClient.bufferedWriter.write(this.account.getUsername() + " would like to private message, enter y to accept or press enter to decline: ");
+            TClient.bufferedWriter.newLine();
+            TClient.bufferedWriter.flush();
+            // read response
+            String response = TClient.bufferedReader.readLine();
+            if (response.matches("y")){
+                sendMessage(userName + " accepted your private messaging request");
+                sendMessage("Client-Info: " + TClient.socket.getPort() );
+                TClient.bufferedWriter.write("Client-Info: " + this.socket.getPort());
+                TClient.bufferedWriter.newLine();
+                TClient.bufferedWriter.flush();
+            }
+            else{
+                sendMessage(userName + " has declined your private messaging request");
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+            closeEverything(socket, bufferedReader, bufferedWriter);
+        }
     }
 
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
