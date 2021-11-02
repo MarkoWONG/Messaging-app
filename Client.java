@@ -17,6 +17,7 @@ public class Client {
     private BufferedWriter peerBufferedWriter;
     private String accountName;
     private String peerName;
+    private ServerSocket serverSocket;
 
     public Client(Socket socket){
         try{
@@ -35,6 +36,12 @@ public class Client {
             while (socket.isConnected() && !socket.isClosed() ){
                 String message = scanner.nextLine();
                 if (message.equals("logout")){
+                    if (peerSocket != null){
+                        stopprivate();
+                    }
+                    bufferedWriter.write(message);
+                    bufferedWriter.newLine();
+                    bufferedWriter.flush();
                     closeEverything(socket, bufferedReader, bufferedWriter);
                 }
                 else if (
@@ -52,15 +59,16 @@ public class Client {
                         bufferedWriter.flush();
                     }
                     else if (validCommand && message.matches("^stopprivate(.*)")){
+                        stopprivate();
                         // System.out.println("Stopped private messaging with " + peerName);
-                        peerBufferedWriter.write("Close "+accountName+" Peer2Peer Server");
-                        peerBufferedWriter.newLine();
-                        peerBufferedWriter.flush();
-                        peerName = null;
-                        closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
-                        bufferedWriter.write("private valid");
-                        bufferedWriter.newLine();
-                        bufferedWriter.flush();
+                        // peerBufferedWriter.write("Close "+accountName+" Peer2Peer Server");
+                        // peerBufferedWriter.newLine();
+                        // peerBufferedWriter.flush();
+                        // peerName = null;
+                        // closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+                        // bufferedWriter.write("private valid");
+                        // bufferedWriter.newLine();
+                        // bufferedWriter.flush();
                     }
                     else{
                         bufferedWriter.write("private invalid");
@@ -79,6 +87,23 @@ public class Client {
         catch (IOException e){
             scanner.close();
             closeEverything(socket, bufferedReader, bufferedWriter);
+        }
+    }
+
+    private void stopprivate(){
+        try{
+            peerBufferedWriter.write("Close "+accountName+" Peer2Peer Server");
+            peerBufferedWriter.newLine();
+            peerBufferedWriter.flush();
+            peerName = null;
+            serverSocket.close();
+            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+            bufferedWriter.write("private valid");
+            bufferedWriter.newLine();
+            bufferedWriter.flush();
+        }
+        catch (IOException e){
+            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
         }
     }
 
@@ -153,7 +178,7 @@ public class Client {
             @Override
             public void run(){
                 try{
-                    ServerSocket serverSocket = new ServerSocket(socket.getLocalPort());
+                    serverSocket = new ServerSocket(socket.getLocalPort());
                     while (!serverSocket.isClosed()){
                         peerSocket = serverSocket.accept();
                         // System.out.println("Peer 2 Peer connected!"+ serverSocket.getLocalPort() + "-->" + peerSocket.getPort());
@@ -186,6 +211,7 @@ public class Client {
                             peerBufferedWriter.newLine();
                             peerBufferedWriter.flush();
                             peerName = null;
+                            serverSocket.close();
                             closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
                         }
                         else{
@@ -262,7 +288,6 @@ public class Client {
         Socket socket = new Socket(args[0], serverPort);
         Client client = new Client(socket);
         client.listenForMessage();
-        // client.startServer();
         client.sendMessage();
         scanner.close();
     }

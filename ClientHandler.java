@@ -170,7 +170,7 @@ public class ClientHandler implements Runnable {
             }
         }
         if (timedOut){
-            sendMessage("Inactivity Detected, " + server.getTimeOut() +" since last command. Please login again. Press enter to quit");
+            sendMessage("Inactivity Detected, " + server.getTimeOut() +" seconds since last command. Please login again. Press enter to quit");
             closeEverything(socket, bufferedReader, bufferedWriter);
         }
         // Valid Commands
