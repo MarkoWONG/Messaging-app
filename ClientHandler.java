@@ -119,7 +119,7 @@ public class ClientHandler implements Runnable {
         account.setLoggedIn(true);
         account.setLastLoginTime(LocalTime.now());
         account.setActiveClient(this);
-        sendMessage("Welcome to the greatest messaging application ever!");
+        sendMessage("Welcome "+ account.getUsername() +" to the greatest messaging application ever!");
         broadcastMessage("logged in");
         clientLoggedIn = true;
         //print all offline messages if there is any
@@ -206,8 +206,11 @@ public class ClientHandler implements Runnable {
                 message = message.split(" ", 2)[1];
                 startPrivate(message);
             }
+            else if (message.matches("^private valid$")){
+
+            }
             else{
-                sendMessage("Error. Invalid command");
+                sendMessage("Error. Invalid command: " + message);
                 System.out.println(account.getUsername() + " Unknown request");
             }
         }
@@ -305,6 +308,12 @@ public class ClientHandler implements Runnable {
         // no further check required beside the regex (logout, broadcast, whoelse)
         else if (msg.matches("^logout$") || msg.matches("^broadcast (.+)") || msg.matches("^whoelse$")){
             return true;
+        }
+        else if (msg.matches("^private valid$")){
+            return true;
+        }
+        else if (msg.matches("^private invalid$")){
+            return false;
         }
         else{
             sendMessage("Error. Invalid command");
@@ -445,6 +454,9 @@ public class ClientHandler implements Runnable {
             // read response
             String response = TClient.bufferedReader.readLine();
             if (response.matches("y")){
+                TClient.bufferedWriter.write("Start "+account.getUsername()+" Peer2Peer Server");
+                TClient.bufferedWriter.newLine();
+                TClient.bufferedWriter.flush();
                 sendMessage(userName + " accepted your private messaging request");
                 sendMessage("Client-Info: " + TClient.socket.getPort() );
                 // System.out.println("target port = " + TClient.socket.getPort());

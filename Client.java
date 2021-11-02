@@ -15,6 +15,8 @@ public class Client {
     private Socket peerSocket;
     private BufferedReader peerBufferedReader;
     private BufferedWriter peerBufferedWriter;
+    private String accountName;
+    private String peerName;
 
     public Client(Socket socket){
         try{
@@ -32,25 +34,46 @@ public class Client {
         try{
             while (socket.isConnected() && !socket.isClosed() ){
                 String message = scanner.nextLine();
-                Boolean valid_command = false;
-                if (
-                    message.matches("^private (.*)") ||
-                    message.matches("^stopprivate (.*)")
-                ){
-                    valid_command = checkCommand(message);
-                    peerBufferedWriter.write(message);
-                    peerBufferedWriter.newLine();
-                    peerBufferedWriter.flush();
+                if (message.equals("logout")){
+                    closeEverything(socket, bufferedReader, bufferedWriter);
                 }
-                // if peer 2 peer command is invlaid send the invlaid command to server is continue timeout
-                if (!valid_command){
+                else if (
+                    message.matches("^private(.*)") ||
+                    message.matches("^stopprivate(.*)")
+                ){
+                    boolean validCommand = checkCommand(message);
+                    if (validCommand && message.matches("^private(.*)")){
+                        message = message.split(" ", 3)[2];
+                        peerBufferedWriter.write(accountName + " (private): " + message);
+                        peerBufferedWriter.newLine();
+                        peerBufferedWriter.flush();
+                        bufferedWriter.write("private valid");
+                        bufferedWriter.newLine();
+                        bufferedWriter.flush();
+                    }
+                    else if (validCommand && message.matches("^stopprivate(.*)")){
+                        // System.out.println("Stopped private messaging with " + peerName);
+                        peerBufferedWriter.write("Close "+accountName+" Peer2Peer Server");
+                        peerBufferedWriter.newLine();
+                        peerBufferedWriter.flush();
+                        peerName = null;
+                        closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+                        bufferedWriter.write("private valid");
+                        bufferedWriter.newLine();
+                        bufferedWriter.flush();
+                    }
+                    else{
+                        bufferedWriter.write("private invalid");
+                        bufferedWriter.newLine();
+                        bufferedWriter.flush();
+                    }
+                }
+                else {
                     bufferedWriter.write(message);
                     bufferedWriter.newLine();
                     bufferedWriter.flush();
                 }
-                if (message.equals("logout")){
-                    closeEverything(socket, bufferedReader, bufferedWriter);
-                }
+                
             }
         }
         catch (IOException e){
@@ -63,43 +86,54 @@ public class Client {
         new Thread(new Runnable(){
             @Override
             public void run(){
-                String messageFromChat;
+                String msg;
 
                 while(socket.isConnected() && !socket.isClosed() ){
                     try{
-                        messageFromChat = bufferedReader.readLine();
+                        msg = bufferedReader.readLine();
                         if (
-                            messageFromChat.matches("^Password:(.*)") ||
-                            messageFromChat.matches("^This is a new user(.*)") ||
-                            messageFromChat.matches("^Username:(.*)") ||
-                            messageFromChat.matches("(.*)press enter to decline: $")
+                            msg.matches("^Password:(.*)") ||
+                            msg.matches("^This is a new user(.*)") ||
+                            msg.matches("^Username:(.*)")
                         ){
-                            System.out.print(messageFromChat);
+                            System.out.print(msg);
                         }
                         else if (
-                            messageFromChat.matches("^Inactivity(.*)") ||
-                            messageFromChat.matches("^Your account is blocked(.*)")
+                            msg.matches("^Inactivity(.*)") ||
+                            msg.matches("^Your account is blocked(.*)")
                         ){
-                            System.out.println(messageFromChat);
+                            System.out.println(msg);
                             closeEverything(socket, bufferedReader, bufferedWriter);
                         }
-                        else if (messageFromChat.matches("^Client-Info: (.+)")){
-                            Integer targetPort = Integer.parseInt(messageFromChat.split(" ")[1]);
+                        else if (msg.matches("^Client-Info: (.+)")){
+                            Integer targetPort = Integer.parseInt(msg.split(" ")[1]);
                             peerSocket = new Socket("localhost", targetPort); //connected if the other end .accept() this new connection
                             
                             peerBufferedWriter = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()));
                             peerBufferedReader = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
                             listenForPrivateMessage();
-                            peerBufferedWriter.write("first msg sent to PeerSever");
-                            peerBufferedWriter.newLine();
-                            peerBufferedWriter.flush();
-                            System.out.println("sent tests message to PeerServer");
-                            // System.out.println("peersocket port is "+ peerSocket.getPort());
-                            // System.out.println("peersocket localport is "+ peerSocket.getLocalPort());
-                           
+                            // peerBufferedWriter.write("first msg sent to PeerSever");
+                            // peerBufferedWriter.newLine();
+                            // peerBufferedWriter.flush();
+                        }
+                        else if (msg.matches("^Welcome (.*)")){
+                            accountName = (msg.split(" ", 3)[1]);
+                            System.out.println(msg);
+                        }
+                        else if (msg.matches("(.+) accepted your private messaging request$")){
+                            peerName = msg.split(" ", 2)[0];
+                            System.out.println(msg);
+                        }
+                        else if (msg.matches("(.+) press enter to decline: $")){
+                            peerName = msg.split(" ", 2)[0];
+                            System.out.print(msg);
+                        }
+                        else if (msg.matches("^Start (.+)")){
+                            peerName = msg.split(" ", 3)[1];
+                            startServer();
                         }
                         else{
-                            System.out.println(messageFromChat);
+                            System.out.println(msg);
                         }
                     }
                     catch(IOException e){
@@ -118,23 +152,18 @@ public class Client {
         new Thread(new Runnable(){
             @Override
             public void run(){
-                try{// use a welcoming port TODO
+                try{
                     ServerSocket serverSocket = new ServerSocket(socket.getLocalPort());
                     while (!serverSocket.isClosed()){
                         peerSocket = serverSocket.accept();
-                        System.out.println("Peer 2 Peer connected!"+ serverSocket.getLocalPort() + "-->" + peerSocket.getPort());
+                        // System.out.println("Peer 2 Peer connected!"+ serverSocket.getLocalPort() + "-->" + peerSocket.getPort());
 
                         peerBufferedWriter = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()));
                         peerBufferedReader = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
                         listenForPrivateMessage();
-                        peerBufferedWriter.write("Welcome Test message from PeerSever");
-                        peerBufferedWriter.newLine();
-                        peerBufferedWriter.flush();
-                        System.out.println("sent Welcome message to connecting client");
-                        // Peer2PeerHandler peer2PeerHandler = new Peer2PeerHandler(socket);
-
-                        // Thread thread = new Thread(peer2PeerHandler);
-                        // thread.start();
+                        // peerBufferedWriter.write("Welcome Test message from PeerSever");
+                        // peerBufferedWriter.newLine();
+                        // peerBufferedWriter.flush();
                     }
                 }
                 catch (IOException e){
@@ -148,11 +177,20 @@ public class Client {
         new Thread(new Runnable(){
             @Override
             public void run(){
-                String messageFromChat;
+                String msg;
                 while(peerSocket.isConnected() && !peerSocket.isClosed() ){
                     try{
-                        messageFromChat = peerBufferedReader.readLine();
-                        System.out.println("(private) :" + messageFromChat);
+                        msg = peerBufferedReader.readLine();
+                        if (msg.matches("^Close (.*)")){
+                            peerBufferedWriter.write("Close "+accountName+" Peer2Peer Server");
+                            peerBufferedWriter.newLine();
+                            peerBufferedWriter.flush();
+                            peerName = null;
+                            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+                        }
+                        else{
+                            System.out.println(msg);
+                        }
                     }
                     catch(IOException e){
                         closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
@@ -161,21 +199,41 @@ public class Client {
                         closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
                     }
                 }
-                System.err.println("Stopped listening to private messages");
+                System.err.println("Peer2Peer messaging is now Closed");
             }
         }).start();
     }
 
     private boolean checkCommand(String message){
         if (message.matches("^private (.+) (.+)")){
-            //TODO: 
-            return true;
+            // Check if correct user
+            String user = message.split(" ",3)[1];
+            // System.out.println("Comparing " + user + " to " + peerName );
+            if (user.equals(peerName)){
+                return true;
+            }
+            System.out.println("Error. Private messaging to "+ user +" not enabled");
+            return false;
         }
-        else if (message.matches("^stopprivate (.*)")){
-            //TODO: 
-            return true;
+        else if (message.matches("^stopprivate (.+)")){
+            // Check if correct user
+            String user = message.split(" ",2)[1];
+            if (user.equals(peerName)){
+                return true;
+            }
+            System.out.println("Error. Private messaging to "+ user +" was never enabled");
+            return false;
+        }
+        else if (message.matches("^private(.*)")){
+            System.out.println("Error. Usage: private <User> <Message>");
+            return false;
+        }
+        else if (message.matches("^stopprivate(.*)")){
+            System.out.println("Error. Usage: stopprivate <User>");
+            return false;
         }
         else {
+            System.out.println("Error. Invalid command");
             return false;
         }
     }
@@ -191,9 +249,6 @@ public class Client {
             if (socket != null){
                 socket.close();
             }
-            if (peerSocket != null){
-                peerSocket.close();
-            }
         }
         catch (IOException e){
             //e.printStackTrace();
@@ -207,8 +262,9 @@ public class Client {
         Socket socket = new Socket(args[0], serverPort);
         Client client = new Client(socket);
         client.listenForMessage();
-        client.startServer();
+        // client.startServer();
         client.sendMessage();
         scanner.close();
     }
+
 }
