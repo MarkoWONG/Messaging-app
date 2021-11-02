@@ -38,6 +38,9 @@ public class Client {
                     message.matches("^stopprivate (.*)")
                 ){
                     valid_command = checkCommand(message);
+                    peerBufferedWriter.write(message);
+                    peerBufferedWriter.newLine();
+                    peerBufferedWriter.flush();
                 }
                 // if peer 2 peer command is invlaid send the invlaid command to server is continue timeout
                 if (!valid_command){
@@ -87,10 +90,10 @@ public class Client {
                             peerBufferedWriter = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()));
                             peerBufferedReader = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
                             listenForPrivateMessage();
-                            peerBufferedWriter.write("first msg sent");
+                            peerBufferedWriter.write("first msg sent to PeerSever");
                             peerBufferedWriter.newLine();
                             peerBufferedWriter.flush();
-                            System.out.println("sent tests message");
+                            System.out.println("sent tests message to PeerServer");
                             // System.out.println("peersocket port is "+ peerSocket.getPort());
                             // System.out.println("peersocket localport is "+ peerSocket.getLocalPort());
                            
@@ -124,10 +127,10 @@ public class Client {
                         peerBufferedWriter = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()));
                         peerBufferedReader = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
                         listenForPrivateMessage();
-                        peerBufferedWriter.write("Welcome Test message");
+                        peerBufferedWriter.write("Welcome Test message from PeerSever");
                         peerBufferedWriter.newLine();
                         peerBufferedWriter.flush();
-                        System.out.println("sent message");
+                        System.out.println("sent Welcome message to connecting client");
                         // Peer2PeerHandler peer2PeerHandler = new Peer2PeerHandler(socket);
 
                         // Thread thread = new Thread(peer2PeerHandler);
@@ -148,10 +151,8 @@ public class Client {
                 String messageFromChat;
                 while(peerSocket.isConnected() && !peerSocket.isClosed() ){
                     try{
-                        System.out.println("waiting for private message");
                         messageFromChat = peerBufferedReader.readLine();
-                        System.out.println("received a private message");
-                        System.out.println(messageFromChat);
+                        System.out.println("(private) :" + messageFromChat);
                     }
                     catch(IOException e){
                         closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
