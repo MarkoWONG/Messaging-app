@@ -38,7 +38,6 @@ public class Client {
                     message.matches("^stopprivate (.*)")
                 ){
                     valid_command = checkCommand(message);
-                    peer2peer(message);
                 }
                 // if peer 2 peer command is invlaid send the invlaid command to server is continue timeout
                 if (!valid_command){
@@ -83,10 +82,18 @@ public class Client {
                         }
                         else if (messageFromChat.matches("^Client-Info: (.+)")){
                             Integer targetPort = Integer.parseInt(messageFromChat.split(" ")[1]);
-                            peerSocket = new Socket("localhost", targetPort);
+                            peerSocket = new Socket("localhost", targetPort); //connected if the other end .accept() this new connection
+                            
                             peerBufferedWriter = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()));
                             peerBufferedReader = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
                             listenForPrivateMessage();
+                            peerBufferedWriter.write("first msg sent");
+                            peerBufferedWriter.newLine();
+                            peerBufferedWriter.flush();
+                            System.out.println("sent tests message");
+                            // System.out.println("peersocket port is "+ peerSocket.getPort());
+                            // System.out.println("peersocket localport is "+ peerSocket.getLocalPort());
+                           
                         }
                         else{
                             System.out.println(messageFromChat);
@@ -103,16 +110,24 @@ public class Client {
         }).start();
     }
 
-    // listen for Peer wanting to connect to this peer's port
-    public void startServer(){
+    //listen for Peer wanting to connect to this peer's port
+    public void startServer(){ // start on private request
         new Thread(new Runnable(){
             @Override
             public void run(){
-                try{
+                try{// use a welcoming port TODO
                     ServerSocket serverSocket = new ServerSocket(socket.getLocalPort());
                     while (!serverSocket.isClosed()){
-                        Socket socket = serverSocket.accept();
-                        System.out.println("Peer 2 Peer connected!");
+                        peerSocket = serverSocket.accept();
+                        System.out.println("Peer 2 Peer connected!"+ serverSocket.getLocalPort() + "-->" + peerSocket.getPort());
+
+                        peerBufferedWriter = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()));
+                        peerBufferedReader = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
+                        listenForPrivateMessage();
+                        peerBufferedWriter.write("Welcome Test message");
+                        peerBufferedWriter.newLine();
+                        peerBufferedWriter.flush();
+                        System.out.println("sent message");
                         // Peer2PeerHandler peer2PeerHandler = new Peer2PeerHandler(socket);
 
                         // Thread thread = new Thread(peer2PeerHandler);
@@ -124,32 +139,6 @@ public class Client {
                 }
             }
         }).start();
-    }
-    
-    /**
-     * peer2peer logic 
-     * @pre valid command (user is correct)
-     * @param message
-     * @return true for a valid peer2peer message, false otherwise
-     */
-    public void peer2peer(String message){
-        if (message.matches("^private (.*)")){
-            try {
-                message = message.split(" ")[2];
-                peerBufferedWriter.write("Test message");
-                peerBufferedWriter.newLine();
-                peerBufferedWriter.flush();
-                System.out.println(peerBufferedWriter.toString());
-                System.out.println("sent test message");
-            }
-            catch (IOException e){
-                e.printStackTrace();
-            } 
-        }
-        else if (message.matches("^stopprivate (.*)")){
-            //TODO: 
-            //close peer2peer connection
-        }
     }
     
     public void listenForPrivateMessage(){

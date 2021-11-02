@@ -447,9 +447,11 @@ public class ClientHandler implements Runnable {
             if (response.matches("y")){
                 sendMessage(userName + " accepted your private messaging request");
                 sendMessage("Client-Info: " + TClient.socket.getPort() );
-                TClient.bufferedWriter.write("Client-Info: " + this.socket.getPort());
-                TClient.bufferedWriter.newLine();
-                TClient.bufferedWriter.flush();
+                // System.out.println("target port = " + TClient.socket.getPort());
+                // System.out.println("Sender port = " + this.socket.getPort());
+                // TClient.bufferedWriter.write("Client-Info: " + this.socket.getPort());
+                // TClient.bufferedWriter.newLine();
+                // TClient.bufferedWriter.flush();
             }
             else{
                 sendMessage(userName + " has declined your private messaging request");

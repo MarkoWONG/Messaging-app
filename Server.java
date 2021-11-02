@@ -11,7 +11,7 @@ public class Server {
     private ServerSocket serverSocket;
     private Integer blockOut;
     private Integer timeOut;
-    private List<Account> accounts = new ArrayList<Account>();;
+    private List<Account> accounts = new ArrayList<Account>();
 
     public Server(ServerSocket serverSocket, Integer blockOut, Integer timeOut){
         this.serverSocket = serverSocket;
@@ -24,7 +24,7 @@ public class Server {
             while (!serverSocket.isClosed()){
 
                 Socket socket = serverSocket.accept();
-                System.out.println("A new client has connected!");
+                System.out.println("A new client has connected!" + serverSocket.getLocalPort() + "-->" + socket.getPort());
                 ClientHandler clientHandler = new ClientHandler(this, socket);
 
                 Thread thread = new Thread(clientHandler);
@@ -35,16 +35,7 @@ public class Server {
             e.printStackTrace();
         }
     }
-    // public void closeServerSocket(){
-    //     try {
-    //         if (serverSocket != null){
-    //             serverSocket.close();
-    //         }
-    //     }
-    //     catch (IOException e){
-    //         e.printStackTrace();
-    //     }
-    // }
+
     private static void popluateAccounts(Server server) throws IOException{
         try {
             File credFile = new File("credentials.txt");
