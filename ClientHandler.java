@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import java.time.LocalTime;
-// import java.util.Arrays;
-// import static java.time.temporal.ChronoUnit.SECONDS;;
 
 public class ClientHandler implements Runnable {
     public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();

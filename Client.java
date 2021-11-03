@@ -284,8 +284,8 @@ public class Client {
     public static void main(String[] args) throws IOException {
         Scanner scanner = new Scanner(System.in);
         // acquire port number from command line parameter
-        Integer serverPort = Integer.parseInt(args[1]);
-        Socket socket = new Socket(args[0], serverPort);
+        Integer serverPort = Integer.parseInt(args[0]);
+        Socket socket = new Socket("localhost", serverPort);
         Client client = new Client(socket);
         client.listenForMessage();
         client.sendMessage();
