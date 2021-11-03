@@ -9,6 +9,7 @@ import java.net.ServerSocket;
 import java.util.Scanner;
 
 public class Client {
+    // Attributes
     private Socket socket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
@@ -19,6 +20,10 @@ public class Client {
     private String peerName;
     private ServerSocket serverSocket;
 
+    /**
+     * Constructor For Client
+     * @param socket
+     */
     public Client(Socket socket){
         try{
             this.socket = socket;
@@ -26,111 +31,16 @@ public class Client {
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         }
         catch (IOException e){
-            System.out.println("Closing 1");
             closeEverything(socket, bufferedReader, bufferedWriter);
         }
     }
 
-    public void inputHandler(){
-        Scanner scanner = new Scanner(System.in);
-        try{
-            while (socket.isConnected() && !socket.isClosed() ){
-                String message = scanner.nextLine();
-                if (message.equals("logout")){
-                    if (peerSocket != null){
-                        stopprivate();
-                    }
-                    bufferedWriter.write(message);
-                    bufferedWriter.newLine();
-                    bufferedWriter.flush();
-                    System.out.println("Closing 2");
-                    closeEverything(socket, bufferedReader, bufferedWriter);
-                }
-                else if (
-                    message.matches("^private(.*)") ||
-                    message.matches("^stopprivate(.*)")
-                ){
-                    boolean validCommand = checkCommand(message);
-                    if (validCommand && message.matches("^private(.*)")){
-                        privateMsg(message);
-                    }
-                    else if (validCommand && message.matches("^stopprivate(.*)")){
-                        stopprivate();
-                    }
-                    else{
-                        bufferedWriter.write("private invalid");
-                        bufferedWriter.newLine();
-                        bufferedWriter.flush();
-                    }
-                }
-                else {
-                    // sendMessage(socket, bufferedReader, bufferedWriter, message);
-                    bufferedWriter.write(message);
-                    bufferedWriter.newLine();
-                    bufferedWriter.flush();
-                }
-                
-            }
-        }
-        catch (IOException e){
-            scanner.close();
-            e.printStackTrace();
-            System.out.println("Closing 3");
-            closeEverything(socket, bufferedReader, bufferedWriter);
-        }
-    }
-
-    private void sendMessage(Socket soc, BufferedReader reader, BufferedWriter writer, String message){
-        try{
-            writer.write(message);
-            writer.newLine();
-            writer.flush();
-        }
-        catch(IOException e){
-            closeEverything(soc, reader, writer);
-        }
-    }
-    private void privateMsg(String message){
-        try{
-            message = message.split(" ", 3)[2];
-            peerBufferedWriter.write(accountName + " (private): " + message);
-            peerBufferedWriter.newLine();
-            peerBufferedWriter.flush();
-            bufferedWriter.write("private valid");
-            bufferedWriter.newLine();
-            bufferedWriter.flush();
-        }
-        catch(IOException e){
-            System.out.println("Closing 3.1");
-            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
-        }
-    }
-
-    private void stopprivate(){
-        try{
-            peerBufferedWriter.write("Close "+accountName+" Peer2Peer Server");
-            peerBufferedWriter.newLine();
-            peerBufferedWriter.flush();
-            peerName = null;
-            serverSocket.close();
-            System.out.println("Closing 4");
-            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
-            bufferedWriter.write("private valid");
-            bufferedWriter.newLine();
-            bufferedWriter.flush();
-        }
-        catch (IOException e){
-            System.out.println("Closing 5");
-            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
-        }
-    }
-
+    // Continously listen to message sent by Server in a new thread
     public void listenForMessage(){
         new Thread(new Runnable(){
             @Override
             public void run(){
                 String msg;
-
                 while(socket.isConnected() && !socket.isClosed() ){
                     try{
                         msg = bufferedReader.readLine();
@@ -146,19 +56,14 @@ public class Client {
                             msg.matches("^Your account is blocked(.*)")
                         ){
                             System.out.println(msg);
-                            System.out.println("Closing 6");
                             closeEverything(socket, bufferedReader, bufferedWriter);
                         }
                         else if (msg.matches("^Client-Info: (.+)")){
                             Integer targetPort = Integer.parseInt(msg.split(" ")[1]);
                             peerSocket = new Socket("localhost", targetPort); //connected if the other end .accept() this new connection
-                            
                             peerBufferedWriter = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()));
                             peerBufferedReader = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
                             listenForPrivateMessage();
-                            // peerBufferedWriter.write("first msg sent to PeerSever");
-                            // peerBufferedWriter.newLine();
-                            // peerBufferedWriter.flush();
                         }
                         else if (msg.matches("^Welcome (.*)")){
                             accountName = (msg.split(" ", 3)[1]);
@@ -181,11 +86,9 @@ public class Client {
                         }
                     }
                     catch(IOException e){
-                        System.out.println("Closing 7");
                         closeEverything(socket, bufferedReader, bufferedWriter);
                     }
                     catch(NullPointerException e){
-                        System.out.println("Closing 8");
                         closeEverything(socket, bufferedReader, bufferedWriter);
                     }
                 }
@@ -193,73 +96,61 @@ public class Client {
         }).start();
     }
 
-    //listen for Peer wanting to connect to this peer's port
-    public void startServer(){ // start on private request
-        new Thread(new Runnable(){
-            @Override
-            public void run(){
-                try{
-                    serverSocket = new ServerSocket(socket.getLocalPort());
-                    while (!serverSocket.isClosed()){
-                        peerSocket = serverSocket.accept();
-                        // System.out.println("Peer 2 Peer connected!"+ serverSocket.getLocalPort() + "-->" + peerSocket.getPort());
-
-                        peerBufferedWriter = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()));
-                        peerBufferedReader = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
-                        listenForPrivateMessage();
-                        // peerBufferedWriter.write("Welcome Test message from PeerSever");
-                        // peerBufferedWriter.newLine();
-                        // peerBufferedWriter.flush();
-                    }
+    // Continously reads input from user
+    public void inputHandler(){
+        Scanner scanner = new Scanner(System.in);
+        while (socket.isConnected() && !socket.isClosed() ){
+            String message = scanner.nextLine();
+            if (message.equals("logout")){
+                if (peerSocket != null){
+                    stopprivate();
                 }
-                catch (IOException e){
-                    System.out.println("Closing 9");
-                    closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+                sendMessage(socket, bufferedReader, bufferedWriter, message);
+                closeEverything(socket, bufferedReader, bufferedWriter);
+            }
+            else if (
+                message.matches("^private(.*)") ||
+                message.matches("^stopprivate(.*)")
+            ){
+                boolean validCommand = checkCommand(message);
+                if (validCommand && message.matches("^private(.*)")){
+                    privateMsg(message);
+                }
+                else if (validCommand && message.matches("^stopprivate(.*)")){
+                    stopprivate();
+                }
+                else{
+                    sendMessage(socket, bufferedReader, bufferedWriter, "private invalid");
                 }
             }
-        }).start();
-    }
-    
-    public void listenForPrivateMessage(){
-        new Thread(new Runnable(){
-            @Override
-            public void run(){
-                String msg;
-                while(peerSocket.isConnected() && !peerSocket.isClosed() ){
-                    try{
-                        msg = peerBufferedReader.readLine();
-                        if (msg.matches("^Close (.*)")){
-                            peerBufferedWriter.write("Close "+accountName+" Peer2Peer Server");
-                            peerBufferedWriter.newLine();
-                            peerBufferedWriter.flush();
-                            peerName = null;
-                            serverSocket.close();
-                            System.out.println("Closing 10");
-                            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
-                        }
-                        else{
-                            System.out.println(msg);
-                        }
-                    }
-                    catch(IOException e){
-                        System.out.println("Closing 11");
-                        closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
-                    }
-                    catch(NullPointerException e){
-                        System.out.println("Closing 12");
-                        closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
-                    }
-                }
-                System.err.println("Peer2Peer messaging is now Closed");
+            else {
+                sendMessage(socket, bufferedReader, bufferedWriter, message);
             }
-        }).start();
+        }
+        scanner.close();
     }
 
+    // Send Message to the appropriate recipient 
+    private void sendMessage(Socket soc, BufferedReader reader, BufferedWriter writer, String message){
+        try{
+            writer.write(message);
+            writer.newLine();
+            writer.flush();
+        }
+        catch(IOException e){
+            closeEverything(soc, reader, writer);
+        }
+    }
+
+    /**
+     * check for if the given command is valid
+     * @param message
+     * @return Validity of Command
+     */
     private boolean checkCommand(String message){
         if (message.matches("^private (.+) (.+)")){
             // Check if correct user
             String user = message.split(" ",3)[1];
-            // System.out.println("Comparing " + user + " to " + peerName );
             if (user.equals(peerName)){
                 return true;
             }
@@ -289,6 +180,85 @@ public class Client {
         }
     }
 
+    /**
+     * Private message command logic: send message to peer and send valid message to server to mainatain timeout
+     * @param message
+     */
+    private void privateMsg(String message){
+        message = message.split(" ", 3)[2];
+        sendMessage(peerSocket, peerBufferedReader, peerBufferedWriter, accountName + " (private): " + message);
+        sendMessage(socket, bufferedReader, bufferedWriter, "private valid");
+    }
+
+    // Stop Peer 2 Peer connection
+    private void stopprivate(){
+        try{
+            sendMessage(peerSocket, peerBufferedReader, peerBufferedWriter, "Close "+accountName+" Peer2Peer Server");
+            peerName = null;
+            serverSocket.close();
+            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+            sendMessage(socket, bufferedReader, bufferedWriter, "private valid");
+        }
+        catch (IOException e){
+            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+        }
+    }
+
+    
+
+    //listen for Peer wanting to connect to this peer's port
+    public void startServer(){ 
+        new Thread(new Runnable(){
+            @Override
+            public void run(){
+                try{
+                    serverSocket = new ServerSocket(socket.getLocalPort());
+                    while (!serverSocket.isClosed()){
+                        peerSocket = serverSocket.accept();
+                        peerBufferedWriter = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()));
+                        peerBufferedReader = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
+                        listenForPrivateMessage();
+                    }
+                }
+                catch (IOException e){
+                    closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+                }
+            }
+        }).start();
+    }
+    
+    // Continously listen for private messages
+    public void listenForPrivateMessage(){
+        new Thread(new Runnable(){
+            @Override
+            public void run(){
+                String msg;
+                while(peerSocket.isConnected() && !peerSocket.isClosed() ){
+                    try{
+                        msg = peerBufferedReader.readLine();
+                        if (msg.matches("^Close (.*)")){
+                            sendMessage(peerSocket, peerBufferedReader, peerBufferedWriter, "Close "+accountName+" Peer2Peer Server");
+                            peerName = null;
+                            serverSocket.close();
+                            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+                        }
+                        else{
+                            System.out.println(msg);
+                        }
+                    }
+                    catch(IOException e){
+                        closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+                    }
+                    catch(NullPointerException e){
+                        closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
+                    }
+                }
+                System.err.println("Peer2Peer messaging is now Closed");
+            }
+        }).start();
+    }
+
+    // Close the socket and read/write streams
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
         try{
             if (bufferedReader != null){
@@ -307,14 +277,15 @@ public class Client {
     }
 
     public static void main(String[] args) throws IOException {
-        Scanner scanner = new Scanner(System.in);
         // acquire port number from command line parameter
         Integer serverPort = Integer.parseInt(args[0]);
+
+        // Connect with Server/ get Socket to communicate with Server
         Socket socket = new Socket("localhost", serverPort);
+
+        // Start Client functions listening to server and reading input
         Client client = new Client(socket);
         client.listenForMessage();
         client.inputHandler();
-        scanner.close();
     }
-
 }
