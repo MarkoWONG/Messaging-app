@@ -26,6 +26,7 @@ public class Client {
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         }
         catch (IOException e){
+            System.out.println("Closing 1");
             closeEverything(socket, bufferedReader, bufferedWriter);
         }
     }
@@ -42,6 +43,7 @@ public class Client {
                     bufferedWriter.write(message);
                     bufferedWriter.newLine();
                     bufferedWriter.flush();
+                    System.out.println("Closing 2");
                     closeEverything(socket, bufferedReader, bufferedWriter);
                 }
                 else if (
@@ -60,15 +62,6 @@ public class Client {
                     }
                     else if (validCommand && message.matches("^stopprivate(.*)")){
                         stopprivate();
-                        // System.out.println("Stopped private messaging with " + peerName);
-                        // peerBufferedWriter.write("Close "+accountName+" Peer2Peer Server");
-                        // peerBufferedWriter.newLine();
-                        // peerBufferedWriter.flush();
-                        // peerName = null;
-                        // closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
-                        // bufferedWriter.write("private valid");
-                        // bufferedWriter.newLine();
-                        // bufferedWriter.flush();
                     }
                     else{
                         bufferedWriter.write("private invalid");
@@ -86,6 +79,8 @@ public class Client {
         }
         catch (IOException e){
             scanner.close();
+            e.printStackTrace();
+            System.out.println("Closing 3");
             closeEverything(socket, bufferedReader, bufferedWriter);
         }
     }
@@ -97,12 +92,14 @@ public class Client {
             peerBufferedWriter.flush();
             peerName = null;
             serverSocket.close();
+            System.out.println("Closing 4");
             closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
             bufferedWriter.write("private valid");
             bufferedWriter.newLine();
             bufferedWriter.flush();
         }
         catch (IOException e){
+            System.out.println("Closing 5");
             closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
         }
     }
@@ -128,6 +125,7 @@ public class Client {
                             msg.matches("^Your account is blocked(.*)")
                         ){
                             System.out.println(msg);
+                            System.out.println("Closing 6");
                             closeEverything(socket, bufferedReader, bufferedWriter);
                         }
                         else if (msg.matches("^Client-Info: (.+)")){
@@ -162,9 +160,11 @@ public class Client {
                         }
                     }
                     catch(IOException e){
+                        System.out.println("Closing 7");
                         closeEverything(socket, bufferedReader, bufferedWriter);
                     }
                     catch(NullPointerException e){
+                        System.out.println("Closing 8");
                         closeEverything(socket, bufferedReader, bufferedWriter);
                     }
                 }
@@ -192,7 +192,8 @@ public class Client {
                     }
                 }
                 catch (IOException e){
-                    closeEverything(socket, bufferedReader, bufferedWriter);
+                    System.out.println("Closing 9");
+                    closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
                 }
             }
         }).start();
@@ -212,6 +213,7 @@ public class Client {
                             peerBufferedWriter.flush();
                             peerName = null;
                             serverSocket.close();
+                            System.out.println("Closing 10");
                             closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
                         }
                         else{
@@ -219,9 +221,11 @@ public class Client {
                         }
                     }
                     catch(IOException e){
+                        System.out.println("Closing 11");
                         closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
                     }
                     catch(NullPointerException e){
+                        System.out.println("Closing 12");
                         closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
                     }
                 }
