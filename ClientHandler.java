@@ -57,12 +57,12 @@ public class ClientHandler implements Runnable {
      */
     private void login() throws IOException{
         // Prompt user for username
-        sendMessage("Username: ");
+        sendMessage(this, "Username: ");
         String userNameInput = bufferedReader.readLine();
 
         if (!server.exisitingAccount(userNameInput)){
             // Create new account
-            sendMessage("This is a new user. Enter a password: ");
+            sendMessage(this, "This is a new user. Enter a password: ");
             String passwordInput = bufferedReader.readLine();
 
             // create new entry for new account
@@ -75,11 +75,11 @@ public class ClientHandler implements Runnable {
             Account loggingInAccount = server.findAccount(userNameInput);
             // Allow only one connection to each account
             if (loggingInAccount.getLoggedIn()){
-                sendMessage(userNameInput + " is already in use. Please use another account.");
+                sendMessage(this, userNameInput + " is already in use. Please use another account.");
             }
             // Check if account is locked out
             else if ( LocalTime.now().compareTo(loggingInAccount.getLockedOutFinishTime()) < 0){
-                sendMessage("Your account is blocked due to multiple login failures. Please try again after: " + server.getBlockOut() + " seconds. Press Enter to quit");
+                sendMessage(this, "Your account is blocked due to multiple login failures. Please try again after: " + server.getBlockOut() + " seconds. Press Enter to quit");
                 closeEverything(socket, bufferedReader, bufferedWriter);
             }
             else {
@@ -87,7 +87,7 @@ public class ClientHandler implements Runnable {
                 boolean activeBlockout = false;
                 for (int attempts = 0; attempts < 3; attempts++){
                     // prompt for password
-                    sendMessage("Password: ");
+                    sendMessage(this,"Password: ");
                     String passwordInput = bufferedReader.readLine();
 
                     //correct password
@@ -98,12 +98,12 @@ public class ClientHandler implements Runnable {
                         break;
                     }
                     // incorrect password
-                    sendMessage("Incorrect password. Please try again. Attempts left: " + (2 - attempts));
+                    sendMessage(this,"Incorrect password. Please try again. Attempts left: " + (2 - attempts));
                     activeBlockout = true;
                 }
                 if (activeBlockout){
                     // Lock up the account
-                    sendMessage("Your account is blocked due to multiple login failures. Please try again after: " + server.getBlockOut() + " seconds. Press Enter to quit");
+                    sendMessage(this,"Your account is blocked due to multiple login failures. Please try again after: " + server.getBlockOut() + " seconds. Press Enter to quit");
                     loggingInAccount.setLockedOutFinishTime(LocalTime.now().plusSeconds(server.getBlockOut()));
                     closeEverything(socket, bufferedReader, bufferedWriter);
                 }
@@ -141,14 +141,14 @@ public class ClientHandler implements Runnable {
         account.setLoggedIn(true);
         account.setLastLoginTime(LocalTime.now());
         account.setActiveClient(this);
-        sendMessage("Welcome "+ account.getUsername() +" to the greatest messaging application ever!");
+        sendMessage(this,"Welcome "+ account.getUsername() +" to the greatest messaging application ever!");
         broadcastMessage("logged in");
         clientLoggedIn = true;
         //print all offline messages if there is any
         if (account.getOfflineMsgs().size() != 0){
-            sendMessage("Messages you missed when your're offline:");
+            sendMessage(this, "Messages you missed when your're offline:");
             for (String msg : account.getOfflineMsgs()){
-                sendMessage(msg);
+                sendMessage(this, msg);
             }
             // remove all offline messages
             account.getOfflineMsgs().clear();
@@ -175,7 +175,7 @@ public class ClientHandler implements Runnable {
             }
         }
         if (timedOut){
-            sendMessage("Inactivity Detected, " + server.getTimeOut() +" seconds since last command. Please login again. Press enter to quit");
+            sendMessage(this, "Inactivity Detected, " + server.getTimeOut() +" seconds since last command. Please login again. Press enter to quit");
             closeEverything(socket, bufferedReader, bufferedWriter);
         }
         // Valid Commands
@@ -215,7 +215,7 @@ public class ClientHandler implements Runnable {
 
             }
             else{
-                sendMessage("Error. Invalid command: " + message);
+                sendMessage(this, "Error. Invalid command: " + message);
                 System.out.println(account.getUsername() + " Unknown request");
             }
         }
@@ -234,7 +234,7 @@ public class ClientHandler implements Runnable {
                 return true;
             }
             catch (NumberFormatException e){
-                sendMessage("Error. Time has to be a number");
+                sendMessage(this, "Error. Time has to be a number");
                 return false;
             }
         }
@@ -244,7 +244,7 @@ public class ClientHandler implements Runnable {
                 return true;
             }
             else{
-                sendMessage("Error. Invalid user");
+                sendMessage(this, "Error. Invalid user");
                 return false;
             }
         }
@@ -254,15 +254,15 @@ public class ClientHandler implements Runnable {
                 return true;
             }
             else if (existingUser(userName) == null){
-                sendMessage("Error. Invalid user");
+                sendMessage(this, "Error. Invalid user");
                 return false;
             }
             else if (account.getUsername().equals(userName)){
-                sendMessage("Error. Cannot block self");
+                sendMessage(this, "Error. Cannot block self");
                 return false;
             }
             else{
-                sendMessage("Error. Invalid command");
+                sendMessage(this, "Error. Invalid command");
                 return false;
             }
         }
@@ -272,15 +272,15 @@ public class ClientHandler implements Runnable {
                 return true;
             }
             else if (existingUser(userName) == null){
-                sendMessage("Error. Invalid user");
+                sendMessage(this, "Error. Invalid user");
                 return false;
             }
             else if (!userInBlockList(userName, account.getBlockedAccounts())){
-                sendMessage("Error. " + userName + " was not blocked");
+                sendMessage(this, "Error. " + userName + " was not blocked");
                 return false;
             }
             else{
-                sendMessage("Error. Invalid command");
+                sendMessage(this, "Error. Invalid command");
                 return false;
             }
         }
@@ -295,23 +295,23 @@ public class ClientHandler implements Runnable {
                 return true;
             }
             else if (existingUser(userName) == null){
-                sendMessage("Error. Invalid user");
+                sendMessage(this, "Error. Invalid user");
                 return false;
             }
             else if (!existingUser(userName).getLoggedIn()){
-                sendMessage("Error. User is offline");
+                sendMessage(this, "Error. User is offline");
                 return false;
             }
             else if (account.getUsername().equals(userName)){
-                sendMessage("Error. Cannot privately message yourself");
+                sendMessage(this, "Error. Cannot privately message yourself");
                 return false;
             }
             else if (!userInBlockList(account.getUsername(), existingUser(userName).getBlockedAccounts())){
-                sendMessage("Error. " + userName + "has blocked you");
+                sendMessage(this, "Error. " + userName + "has blocked you");
                 return false;
             }
             else{
-                sendMessage("Error. Invalid command");
+                sendMessage(this, "Error. Invalid command");
                 return false;
             }
         }
@@ -326,7 +326,7 @@ public class ClientHandler implements Runnable {
             return false;
         }
         else{
-            sendMessage("Error. Invalid command");
+            sendMessage(this, "Error. Invalid command");
             return false;
         }
     }
@@ -362,16 +362,19 @@ public class ClientHandler implements Runnable {
     
     /**
      * Send Message to the appropriate recipient 
+     * @param soc
+     * @param reader
+     * @param writer
      * @param message
      */
-    private void sendMessage(String message){
+    private void sendMessage(ClientHandler client, String message){
         try{
-            bufferedWriter.write(message);
-            bufferedWriter.newLine();
-            bufferedWriter.flush();
+            client.bufferedWriter.write(message);
+            client.bufferedWriter.newLine();
+            client.bufferedWriter.flush();
         }
-        catch (IOException e){
-            closeEverything(socket, bufferedReader, bufferedWriter);
+        catch(IOException e){
+            closeEverything(client.socket, client.bufferedReader, client.bufferedWriter);
         }
     }
 
@@ -382,32 +385,25 @@ public class ClientHandler implements Runnable {
     private void broadcastMessage(String message){
         Boolean blockedInEffect = false;
         for (ClientHandler clientHandler : clientHandlers){
-            try{
-                // don't send to self or client not logged in or if the receiver is blocked
-                if (
-                    clientHandler.account != null && 
-                    !clientHandler.account.getUsername().equals(this.account.getUsername()) &&
-                    !userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())
-                ){
-                    if (message.matches("^logged out$") || message.matches("^logged in$")){
-                        clientHandler.bufferedWriter.write(this.account.getUsername() + " " + message);
-                    }
-                    else{
-                        clientHandler.bufferedWriter.write(this.account.getUsername() + ": " + message);
-                    }
-                    clientHandler.bufferedWriter.newLine();
-                    clientHandler.bufferedWriter.flush();
+            // don't send to self or client not logged in or if the receiver is blocked
+            if (
+                clientHandler.account != null && 
+                !clientHandler.account.getUsername().equals(this.account.getUsername()) &&
+                !userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())
+            ){
+                if (message.matches("^logged out$") || message.matches("^logged in$")){
+                    sendMessage(clientHandler, this.account.getUsername() + " " + message);
                 }
-                else if (clientHandler.account != null && userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())){
-                    blockedInEffect = true;
+                else{
+                    sendMessage(clientHandler, this.account.getUsername() + ": " + message);
                 }
             }
-            catch (IOException e){
-                closeEverything(socket, bufferedReader, bufferedWriter);
+            else if (clientHandler.account != null && userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())){
+                blockedInEffect = true;
             }
         }
         if (blockedInEffect == true && !(message.matches("^logged out$") || message.matches("^logged in$"))){
-            sendMessage("Your message could not be delivered to some recipients");
+            sendMessage(this, "Your message could not be delivered to some recipients");
         }
     }
 
@@ -415,7 +411,7 @@ public class ClientHandler implements Runnable {
     private void whoelse() {
         for (Account acc : server.getAccounts()){
             if (acc.getLoggedIn() && acc != account && !userInBlockList(account.getUsername(), acc.getBlockedAccounts()) ){
-                sendMessage(acc.getUsername());
+                sendMessage(this, acc.getUsername());
             }
         }
     }
@@ -432,7 +428,7 @@ public class ClientHandler implements Runnable {
                 acc.getLastLoginTime() != null && 
                 acc.getLastLoginTime().compareTo(LocalTime.now().minusSeconds(time)) > 0
             ){
-                sendMessage(acc.getUsername());
+                sendMessage(this, acc.getUsername());
             }
         }
     }
@@ -445,24 +441,16 @@ public class ClientHandler implements Runnable {
         String targetName = msg.split(" ", 2)[0];
         String message = msg.split(" ", 2)[1];
         Account target = existingUser(targetName);
-        try{
-            ClientHandler TClient = target.getActiveClient();
-            if (TClient != null && !userInBlockList(account.getUsername(), target.getBlockedAccounts())){
-                TClient.bufferedWriter.write(this.account.getUsername() + ": " + message);
-                TClient.bufferedWriter.newLine();
-                TClient.bufferedWriter.flush();
-            }
-            else if (userInBlockList(account.getUsername(), target.getBlockedAccounts())){
-                sendMessage("Your message could not be delivered as the recipient has blocked you");
-            }
-            // offline messenging: store messenges in account then sent it all when user logs in
-            else{
-                target.getOfflineMsgs().add(this.account.getUsername() + ": " + message);
-            }
+        ClientHandler TClient = target.getActiveClient();
+        if (TClient != null && !userInBlockList(account.getUsername(), target.getBlockedAccounts())){
+            sendMessage(TClient, this.account.getUsername() + ": " + message);
         }
-        catch (IOException e){
-            e.printStackTrace();
-            closeEverything(socket, bufferedReader, bufferedWriter);
+        else if (userInBlockList(account.getUsername(), target.getBlockedAccounts())){
+            sendMessage(this, "Your message could not be delivered as the recipient has blocked you");
+        }
+        // offline messenging: store messenges in account then sent it all when user logs in
+        else{
+            target.getOfflineMsgs().add(this.account.getUsername() + ": " + message);
         }
     }
 
@@ -471,7 +459,7 @@ public class ClientHandler implements Runnable {
      * @param userName
      */
     private void blockAccount(String userName){
-        sendMessage(userName + " is blocked");
+        sendMessage(this, userName + " is blocked");
         Account target = existingUser(userName);
         if (!account.getBlockedAccounts().contains(target)){
             account.getBlockedAccounts().add(target);
@@ -483,7 +471,7 @@ public class ClientHandler implements Runnable {
      * @param userName
      */
     private void unblockAccount(String userName){
-        sendMessage(userName + " is unblocked");
+        sendMessage(this, userName + " is unblocked");
         Account target = existingUser(userName);
         account.getBlockedAccounts().remove(target);
     }
@@ -494,23 +482,20 @@ public class ClientHandler implements Runnable {
      */
     private void startPrivate(String userName){
         Account target = existingUser(userName);
-        sendMessage("Start private messaging with " + userName);
+        sendMessage(this, "Start private messaging with " + userName);
         try{
             ClientHandler TClient = target.getActiveClient();
-            TClient.bufferedWriter.write(this.account.getUsername() + " would like to private message, enter y to accept or press enter to decline: ");
-            TClient.bufferedWriter.newLine();
-            TClient.bufferedWriter.flush();
+            sendMessage(TClient, this.account.getUsername() + " would like to private message, enter y to accept or press enter to decline: ");
+
             // read response
             String response = TClient.bufferedReader.readLine();
             if (response.matches("y")){
-                TClient.bufferedWriter.write("Start "+account.getUsername()+" Peer2Peer Server");
-                TClient.bufferedWriter.newLine();
-                TClient.bufferedWriter.flush();
-                sendMessage(userName + " accepted your private messaging request");
-                sendMessage("Client-Info: " + TClient.socket.getPort() );
+                sendMessage(TClient, "Start "+account.getUsername()+" Peer2Peer Server");
+                sendMessage(this, userName + " accepted your private messaging request");
+                sendMessage(this, "Client-Info: " + TClient.socket.getPort() );
             }
             else{
-                sendMessage(userName + " has declined your private messaging request");
+                sendMessage(this, userName + " has declined your private messaging request");
             }
         }
         catch (IOException e){

@@ -130,7 +130,13 @@ public class Client {
         scanner.close();
     }
 
-    // Send Message to the appropriate recipient 
+    /**
+     * Send Message to the appropriate recipient 
+     * @param soc
+     * @param reader
+     * @param writer
+     * @param message
+     */
     private void sendMessage(Socket soc, BufferedReader reader, BufferedWriter writer, String message){
         try{
             writer.write(message);
