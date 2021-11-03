@@ -490,7 +490,7 @@ public class ClientHandler implements Runnable {
             // read response
             String response = TClient.bufferedReader.readLine();
             if (response.matches("y")){
-                sendMessage(TClient, "Start "+account.getUsername()+" Peer2Peer Server");
+                sendMessage(TClient, "Startup "+account.getUsername()+" Peer2Peer Server");
                 sendMessage(this, userName + " accepted your private messaging request");
                 sendMessage(this, "Client-Info: " + TClient.socket.getPort() );
             }

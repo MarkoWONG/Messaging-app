@@ -74,10 +74,10 @@ public class Client {
                             System.out.println(msg);
                         }
                         else if (msg.matches("(.+) press enter to decline: $")){
-                            peerName = msg.split(" ", 2)[0];
+                            // peerName = msg.split(" ", 2)[0];
                             System.out.print(msg);
                         }
-                        else if (msg.matches("^Start (.+)")){
+                        else if (msg.matches("^Startup (.+)")){
                             peerName = msg.split(" ", 3)[1];
                             startServer();
                         }
