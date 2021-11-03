@@ -204,8 +204,6 @@ public class Client {
         }
     }
 
-    
-
     //listen for Peer wanting to connect to this peer's port
     public void startServer(){ 
         new Thread(new Runnable(){
@@ -258,7 +256,12 @@ public class Client {
         }).start();
     }
 
-    // Close the socket and read/write streams
+    /**
+     * Close the socket and read/write stream
+     * @param socket
+     * @param bufferedReader
+     * @param bufferedWriter
+     */
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
         try{
             if (bufferedReader != null){

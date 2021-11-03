@@ -32,7 +32,6 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         String message = "";
-
         while (socket.isConnected() && !socket.isClosed()){
             try{
                 // Login
@@ -50,18 +49,19 @@ public class ClientHandler implements Runnable {
                 break;
             }
         }
-        
     }
 
+    /**
+     * Attempt to login the Client to a account
+     * @throws IOException
+     */
     private void login() throws IOException{
         // Prompt user for username
         sendMessage("Username: ");
         String userNameInput = bufferedReader.readLine();
 
-        // check username
-        // Create new account
         if (!server.exisitingAccount(userNameInput)){
-            // prompt for password
+            // Create new account
             sendMessage("This is a new user. Enter a password: ");
             String passwordInput = bufferedReader.readLine();
 
@@ -69,6 +69,7 @@ public class ClientHandler implements Runnable {
             account = createNewAccount(userNameInput, passwordInput);
             loginSuccessful(account);
         }
+
         // login into existing account
         else{
             Account loggingInAccount = server.findAccount(userNameInput);
@@ -81,7 +82,6 @@ public class ClientHandler implements Runnable {
                 sendMessage("Your account is blocked due to multiple login failures. Please try again after: " + server.getBlockOut() + " seconds. Press Enter to quit");
                 closeEverything(socket, bufferedReader, bufferedWriter);
             }
-            // account is not locked out
             else {
                 // check password
                 boolean activeBlockout = false;
@@ -110,27 +110,6 @@ public class ClientHandler implements Runnable {
             }
         }
     }
-
-    private void loginSuccessful(Account acc){
-        // set the client account to the logging in account as the client now has an account
-        account = acc;
-        account.setLoggedIn(true);
-        account.setLastLoginTime(LocalTime.now());
-        account.setActiveClient(this);
-        sendMessage("Welcome "+ account.getUsername() +" to the greatest messaging application ever!");
-        broadcastMessage("logged in");
-        clientLoggedIn = true;
-        //print all offline messages if there is any
-        if (account.getOfflineMsgs().size() != 0){
-            sendMessage("Messages you missed when your're offline:");
-            for (String msg : account.getOfflineMsgs()){
-                sendMessage(msg);
-            }
-            // remove all offline messages
-            account.getOfflineMsgs().clear();
-        }
-    }
-
     /**
      * Creates a new account by appending new account detials to credentials file
      * @param userName
@@ -152,6 +131,35 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    /**
+     * logins the Client to an account
+     * @param acc
+     */
+    private void loginSuccessful(Account acc){
+        // set the client's account
+        account = acc;
+        account.setLoggedIn(true);
+        account.setLastLoginTime(LocalTime.now());
+        account.setActiveClient(this);
+        sendMessage("Welcome "+ account.getUsername() +" to the greatest messaging application ever!");
+        broadcastMessage("logged in");
+        clientLoggedIn = true;
+        //print all offline messages if there is any
+        if (account.getOfflineMsgs().size() != 0){
+            sendMessage("Messages you missed when your're offline:");
+            for (String msg : account.getOfflineMsgs()){
+                sendMessage(msg);
+            }
+            // remove all offline messages
+            account.getOfflineMsgs().clear();
+        }
+    }
+
+    /**
+     * handles all commands issued by the Client
+     * @param message
+     * @throws IOException
+     */
     private void commandHandler(String message) throws IOException{
         LocalTime timeOutTimer = LocalTime.now();
         boolean timedOut = true;
@@ -160,7 +168,6 @@ public class ClientHandler implements Runnable {
         while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
             if (bufferedReader.ready()) {
                 message = bufferedReader.readLine();
-                // String command = message.split(" ",2)[0];
                 if (checkCommand(message)){
                     timedOut = false;
                     break;
@@ -214,6 +221,11 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    /**
+     * Checks the validity of the command
+     * @param msg
+     * @return true for valid command
+     */
     private boolean checkCommand(String msg){
         // whoelsesince message needs to be a number
         if (msg.matches("^whoelsesince (.+)")){
@@ -319,6 +331,11 @@ public class ClientHandler implements Runnable {
         }
     }
     
+    /**
+     * finds the account of associated with the username
+     * @param userName
+     * @return Account
+     */
     private Account existingUser(String userName){
         for (Account acc : server.getAccounts()){
             if (acc.getUsername().equals(userName)){
@@ -328,7 +345,12 @@ public class ClientHandler implements Runnable {
         return null;
     }
 
-    //checks if the user is in the blocked list of this user
+    /**
+     * checks if the user is in the blocked list of this user
+     * @param userName
+     * @param blockedList
+     * @return true for blocked user
+     */
     private boolean userInBlockList(String userName, List<Account> blockedList) {
         for (Account acc : blockedList){
             if (acc.getUsername().equals(userName)){
@@ -337,7 +359,11 @@ public class ClientHandler implements Runnable {
         }
         return false;
     }
-        
+    
+    /**
+     * Send Message to the appropriate recipient 
+     * @param message
+     */
     private void sendMessage(String message){
         try{
             bufferedWriter.write(message);
@@ -349,6 +375,10 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    /**
+     * Send message to all active Clients
+     * @param message
+    */
     private void broadcastMessage(String message){
         Boolean blockedInEffect = false;
         for (ClientHandler clientHandler : clientHandlers){
@@ -381,6 +411,7 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    // Check which user is currently online
     private void whoelse() {
         for (Account acc : server.getAccounts()){
             if (acc.getLoggedIn() && acc != account && !userInBlockList(account.getUsername(), acc.getBlockedAccounts()) ){
@@ -389,6 +420,10 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    /**
+     * Check which user is was online after the provided time
+     * @param time
+     */
     private void whoelsesince(int time) {
         for (Account acc : server.getAccounts()){
             if (
@@ -402,6 +437,10 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    /**
+     * sent message to a particular person via server
+     * @param msg
+     */
     private void messagePerson(String msg){
         String targetName = msg.split(" ", 2)[0];
         String message = msg.split(" ", 2)[1];
@@ -427,6 +466,10 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    /**
+     * Block the user
+     * @param userName
+     */
     private void blockAccount(String userName){
         sendMessage(userName + " is blocked");
         Account target = existingUser(userName);
@@ -435,12 +478,20 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    /**
+     * unBlock the user
+     * @param userName
+     */
     private void unblockAccount(String userName){
         sendMessage(userName + " is unblocked");
         Account target = existingUser(userName);
         account.getBlockedAccounts().remove(target);
     }
-
+    
+    /**
+     * Establish the connection between two clients
+     * @param userName
+     */
     private void startPrivate(String userName){
         Account target = existingUser(userName);
         sendMessage("Start private messaging with " + userName);
@@ -468,9 +519,16 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    /**
+     * Close the socket and read/write streams
+     * @param socket
+     * @param bufferedReader
+     * @param bufferedWriter
+     */
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
         if (clientLoggedIn){
-            removeClientHandler();
+            clientHandlers.remove(this);
+            broadcastMessage("logged out");
             account.setLoggedIn(false);
             account.setActiveClient(null);
             clientLoggedIn = false;
@@ -489,9 +547,5 @@ public class ClientHandler implements Runnable {
         catch (IOException e){
             e.printStackTrace();
         }
-    }
-    private void removeClientHandler(){
-        clientHandlers.remove(this);
-        broadcastMessage("logged out");
     }
 }

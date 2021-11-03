@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class Server {
-    private ServerSocket serverSocket;
-    private Integer blockOut;
-    private Integer timeOut;
+    private final ServerSocket serverSocket;
+    private final Integer blockOut;
+    private final Integer timeOut;
     private List<Account> accounts = new ArrayList<Account>();
 
     public Server(ServerSocket serverSocket, Integer blockOut, Integer timeOut){
@@ -19,23 +19,11 @@ public class Server {
         this.timeOut = timeOut;
     }
 
-    public void startServer(){
-        try{
-            while (!serverSocket.isClosed()){
-
-                Socket socket = serverSocket.accept();
-                System.out.println("A new client has connected!" + serverSocket.getLocalPort() + "-->" + socket.getPort());
-                ClientHandler clientHandler = new ClientHandler(this, socket);
-
-                Thread thread = new Thread(clientHandler);
-                thread.start();
-            }
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
-    }
-
+    /**
+     * Fills the server with the accounts in the credentials.txt
+     * @param server
+     * @throws IOException
+     */
     private static void popluateAccounts(Server server) throws IOException{
         try {
             File credFile = new File("credentials.txt");
@@ -53,6 +41,25 @@ public class Server {
             throw new IOException("credentials.txt was not found");
         }
     }
+
+    // Start Server to wait for new connections
+    public void startServer(){
+        try{
+            while (!serverSocket.isClosed()){
+
+                Socket socket = serverSocket.accept();
+                System.out.println("A new client has connected!" + serverSocket.getLocalPort() + "-->" + socket.getPort());
+                ClientHandler clientHandler = new ClientHandler(this, socket);
+
+                Thread thread = new Thread(clientHandler);
+                thread.start();
+            }
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Finds the account in the list of created accounts
      * @param userNameInput
@@ -92,6 +99,13 @@ public class Server {
         }
     }
 
+    /**
+     * check for correct password a user
+     * @param usernameInput
+     * @param passwordInput
+     * @return if a password is correct
+     * @throws FileNotFoundException
+     */
     public boolean checkPassword(String usernameInput, String passwordInput) throws FileNotFoundException{
         try {
             File credFile = new File("credentials.txt");
@@ -143,38 +157,17 @@ public class Server {
 
     }
     
-    // Getters and Setters
-    public ServerSocket getServerSocket() {
-        return this.serverSocket;
-    }
-
-    public void setServerSocket(ServerSocket serverSocket) {
-        this.serverSocket = serverSocket;
-    }
-
+    // Getters
     public Integer getBlockOut() {
         return this.blockOut;
-    }
-
-    public void setBlockOut(Integer blockOut) {
-        this.blockOut = blockOut;
     }
 
     public Integer getTimeOut() {
         return this.timeOut;
     }
 
-    public void setTimeOut(Integer timeOut) {
-        this.timeOut = timeOut;
-    }
-
     public List<Account> getAccounts() {
         return this.accounts;
     }
-
-    public void setAccounts(List<Account> accounts) {
-        this.accounts = accounts;
-    }
-    
 }
 
