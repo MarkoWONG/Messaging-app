@@ -47,7 +47,8 @@ public class Client {
                         if (
                             msg.matches("^Password:(.*)") ||
                             msg.matches("^This is a new user(.*)") ||
-                            msg.matches("^Username:(.*)")
+                            msg.matches("^Username:(.*)") ||
+                            msg.matches("(.+) press enter to decline: $")
                         ){
                             System.out.print(msg);
                         }
@@ -60,7 +61,8 @@ public class Client {
                         }
                         else if (msg.matches("^Client-Info: (.+)")){
                             Integer targetPort = Integer.parseInt(msg.split(" ")[1]);
-                            peerSocket = new Socket("localhost", targetPort); //connected if the other end .accept() this new connection
+                            // connect to Peer
+                            peerSocket = new Socket("localhost", targetPort);
                             peerBufferedWriter = new BufferedWriter(new OutputStreamWriter(peerSocket.getOutputStream()));
                             peerBufferedReader = new BufferedReader(new InputStreamReader(peerSocket.getInputStream()));
                             listenForPrivateMessage();
@@ -72,10 +74,6 @@ public class Client {
                         else if (msg.matches("(.+) accepted your private messaging request$")){
                             peerName = msg.split(" ", 2)[0];
                             System.out.println(msg);
-                        }
-                        else if (msg.matches("(.+) press enter to decline: $")){
-                            // peerName = msg.split(" ", 2)[0];
-                            System.out.print(msg);
                         }
                         else if (msg.matches("^Startup (.+)")){
                             peerName = msg.split(" ", 3)[1];
@@ -201,7 +199,9 @@ public class Client {
         try{
             sendMessage(peerSocket, peerBufferedReader, peerBufferedWriter, "Close "+accountName+" Peer2Peer Server");
             peerName = null;
-            serverSocket.close();
+            if (serverSocket != null){
+                serverSocket.close();
+            }
             closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
             sendMessage(socket, bufferedReader, bufferedWriter, "private valid");
         }
@@ -210,7 +210,7 @@ public class Client {
         }
     }
 
-    //listen for Peer wanting to connect to this peer's port
+    // listen for Peer wanting to connect to this peer's port
     public void startServer(){ 
         new Thread(new Runnable(){
             @Override
