@@ -98,7 +98,7 @@ public class ClientHandler implements Runnable {
                         break;
                     }
                     // incorrect password
-                    sendMessage("Incorrect password. Please try again. Attempts left: " + (3 - attempts));
+                    sendMessage("Incorrect password. Please try again. Attempts left: " + (2 - attempts));
                     activeBlockout = true;
                 }
                 if (activeBlockout){
@@ -474,10 +474,12 @@ public class ClientHandler implements Runnable {
     }
 
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
-        removeClientHandler();
-        account.setLoggedIn(false);
-        account.setActiveClient(null);
-        clientLoggedIn = false;
+        if (clientLoggedIn){
+            removeClientHandler();
+            account.setLoggedIn(false);
+            account.setActiveClient(null);
+            clientLoggedIn = false;
+        }
         try{
             if (bufferedReader != null){
                 bufferedReader.close();
