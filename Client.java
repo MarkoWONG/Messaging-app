@@ -31,7 +31,7 @@ public class Client {
         }
     }
 
-    public void sendMessage(){
+    public void inputHandler(){
         Scanner scanner = new Scanner(System.in);
         try{
             while (socket.isConnected() && !socket.isClosed() ){
@@ -52,13 +52,7 @@ public class Client {
                 ){
                     boolean validCommand = checkCommand(message);
                     if (validCommand && message.matches("^private(.*)")){
-                        message = message.split(" ", 3)[2];
-                        peerBufferedWriter.write(accountName + " (private): " + message);
-                        peerBufferedWriter.newLine();
-                        peerBufferedWriter.flush();
-                        bufferedWriter.write("private valid");
-                        bufferedWriter.newLine();
-                        bufferedWriter.flush();
+                        privateMsg(message);
                     }
                     else if (validCommand && message.matches("^stopprivate(.*)")){
                         stopprivate();
@@ -70,6 +64,7 @@ public class Client {
                     }
                 }
                 else {
+                    // sendMessage(socket, bufferedReader, bufferedWriter, message);
                     bufferedWriter.write(message);
                     bufferedWriter.newLine();
                     bufferedWriter.flush();
@@ -82,6 +77,32 @@ public class Client {
             e.printStackTrace();
             System.out.println("Closing 3");
             closeEverything(socket, bufferedReader, bufferedWriter);
+        }
+    }
+
+    private void sendMessage(Socket soc, BufferedReader reader, BufferedWriter writer, String message){
+        try{
+            writer.write(message);
+            writer.newLine();
+            writer.flush();
+        }
+        catch(IOException e){
+            closeEverything(soc, reader, writer);
+        }
+    }
+    private void privateMsg(String message){
+        try{
+            message = message.split(" ", 3)[2];
+            peerBufferedWriter.write(accountName + " (private): " + message);
+            peerBufferedWriter.newLine();
+            peerBufferedWriter.flush();
+            bufferedWriter.write("private valid");
+            bufferedWriter.newLine();
+            bufferedWriter.flush();
+        }
+        catch(IOException e){
+            System.out.println("Closing 3.1");
+            closeEverything(peerSocket, peerBufferedReader, peerBufferedWriter);
         }
     }
 
@@ -292,7 +313,7 @@ public class Client {
         Socket socket = new Socket("localhost", serverPort);
         Client client = new Client(socket);
         client.listenForMessage();
-        client.sendMessage();
+        client.inputHandler();
         scanner.close();
     }
 
