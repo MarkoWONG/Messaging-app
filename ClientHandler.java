@@ -389,7 +389,7 @@ public class ClientHandler implements Runnable {
             if (
                 clientHandler.account != null && 
                 !clientHandler.account.getUsername().equals(this.account.getUsername()) &&
-                !userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())
+                !userInBlockList(clientHandler.account.getUsername(), this.account.getBlockedAccounts())
             ){
                 if (message.matches("^logged out$") || message.matches("^logged in$")){
                     sendMessage(clientHandler, this.account.getUsername() + " " + message);
