@@ -142,7 +142,7 @@ public class ClientHandler implements Runnable {
         account.setLastLoginTime(LocalTime.now());
         account.setActiveClient(this);
         sendMessage(this,"Welcome "+ account.getUsername() +" to the greatest messaging application ever!");
-        broadcastMessage("logged in");
+        presenceNotification("logged in");
         clientLoggedIn = true;
         //print all offline messages if there is any
         if (account.getOfflineMsgs().size() != 0){
@@ -389,21 +389,34 @@ public class ClientHandler implements Runnable {
             if (
                 clientHandler.account != null && 
                 !clientHandler.account.getUsername().equals(this.account.getUsername()) &&
-                !userInBlockList(clientHandler.account.getUsername(), this.account.getBlockedAccounts())
+                !userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())
             ){
-                if (message.matches("^logged out$") || message.matches("^logged in$")){
-                    sendMessage(clientHandler, this.account.getUsername() + " " + message);
-                }
-                else{
+                // if (message.matches("^logged out$") || message.matches("^logged in$")){
+                //     sendMessage(clientHandler, this.account.getUsername() + " " + message);
+                // }
+                // else{
                     sendMessage(clientHandler, this.account.getUsername() + ": " + message);
-                }
+                // }
             }
             else if (clientHandler.account != null && userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())){
                 blockedInEffect = true;
             }
         }
-        if (blockedInEffect == true && !(message.matches("^logged out$") || message.matches("^logged in$"))){
+        if (blockedInEffect == true ){//&& !(message.matches("^logged out$") || message.matches("^logged in$"))){
             sendMessage(this, "Your message could not be delivered to some recipients");
+        }
+    }
+
+    private void presenceNotification(String message){
+        for (ClientHandler clientHandler : clientHandlers){
+            // don't send to self or client not logged in or if you have blocked the receiver
+            if (
+                clientHandler.account != null && 
+                !clientHandler.account.getUsername().equals(this.account.getUsername()) &&
+                !userInBlockList(clientHandler.account.getUsername(), this.account.getBlockedAccounts())
+            ){
+                sendMessage(clientHandler, this.account.getUsername() + " " + message);
+            }
         }
     }
 
@@ -513,7 +526,7 @@ public class ClientHandler implements Runnable {
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
         if (clientLoggedIn){
             clientHandlers.remove(this);
-            broadcastMessage("logged out");
+            presenceNotification("logged out");
             account.setLoggedIn(false);
             account.setActiveClient(null);
             clientLoggedIn = false;
