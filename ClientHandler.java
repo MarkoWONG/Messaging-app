@@ -391,18 +391,13 @@ public class ClientHandler implements Runnable {
                 !clientHandler.account.getUsername().equals(this.account.getUsername()) &&
                 !userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())
             ){
-                // if (message.matches("^logged out$") || message.matches("^logged in$")){
-                //     sendMessage(clientHandler, this.account.getUsername() + " " + message);
-                // }
-                // else{
-                    sendMessage(clientHandler, this.account.getUsername() + ": " + message);
-                // }
+                sendMessage(clientHandler, this.account.getUsername() + ": " + message);
             }
             else if (clientHandler.account != null && userInBlockList(this.account.getUsername(), clientHandler.account.getBlockedAccounts())){
                 blockedInEffect = true;
             }
         }
-        if (blockedInEffect == true ){//&& !(message.matches("^logged out$") || message.matches("^logged in$"))){
+        if (blockedInEffect == true ){
             sendMessage(this, "Your message could not be delivered to some recipients");
         }
     }
@@ -505,7 +500,7 @@ public class ClientHandler implements Runnable {
             if (response.matches("y")){
                 sendMessage(TClient, "Startup "+account.getUsername()+" Peer2Peer Server");
                 sendMessage(this, userName + " accepted your private messaging request");
-                sendMessage(this, "Client-Info: " + TClient.socket.getPort() );
+                sendMessage(this, "Client-Info: " + (TClient.socket.getPort()+1) );
             }
             else{
                 sendMessage(this, userName + " has declined your private messaging request");
