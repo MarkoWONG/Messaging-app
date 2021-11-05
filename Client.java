@@ -62,6 +62,9 @@ public class Client {
                             msg.matches("^Your account is blocked(.*)")
                         ){
                             System.out.println(msg);
+                            if (peerSocket != null){
+                                stopprivate();
+                            }
                             closeEverything(socket, bufferedReader, bufferedWriter);
                         }
                         else if (msg.matches("^Client-Info: (.+)")){
