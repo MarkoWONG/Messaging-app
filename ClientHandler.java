@@ -164,7 +164,7 @@ public class ClientHandler implements Runnable {
         LocalTime timeOutTimer = LocalTime.now();
         boolean timedOut = true;
         // Time out logic
-        System.out.println(account.getUsername() + "'s Timer (Re)Started At " + LocalTime.now().toString());
+        // System.out.println(account.getUsername() + "'s Timer (Re)Started At " + LocalTime.now().toString());
         while (timeOutTimer.plusSeconds(server.getTimeOut()).compareTo(LocalTime.now()) > 0) {
             if (bufferedReader.ready()) {
                 message = bufferedReader.readLine();
@@ -181,7 +181,7 @@ public class ClientHandler implements Runnable {
         // Valid Commands
         else{
             if (message.equals("logout")){
-                System.out.println(account.getUsername() +  " logged out");
+                // System.out.println(account.getUsername() +  " logged out");
                 closeEverything(socket, bufferedReader, bufferedWriter);
             }
             else if (message.matches("^broadcast (.*)")){
@@ -216,7 +216,7 @@ public class ClientHandler implements Runnable {
             }
             else{
                 sendMessage(this, "Error. Invalid command: " + message);
-                System.out.println(account.getUsername() + " Unknown request");
+                // System.out.println(account.getUsername() + " Unknown request");
             }
         }
     }
@@ -306,8 +306,8 @@ public class ClientHandler implements Runnable {
                 sendMessage(this, "Error. Cannot privately message yourself");
                 return false;
             }
-            else if (!userInBlockList(account.getUsername(), existingUser(userName).getBlockedAccounts())){
-                sendMessage(this, "Error. " + userName + "has blocked you");
+            else if (userInBlockList(account.getUsername(), existingUser(userName).getBlockedAccounts())){
+                sendMessage(this, "Error. " + userName + " has blocked you");
                 return false;
             }
             else{
@@ -434,7 +434,7 @@ public class ClientHandler implements Runnable {
                 acc != account && 
                 !userInBlockList(account.getUsername(), acc.getBlockedAccounts()) &&
                 acc.getLastLoginTime() != null && 
-                acc.getLastLoginTime().compareTo(LocalTime.now().minusSeconds(time)) > 0
+                acc.getLastLoginTime().compareTo(LocalTime.now().minusSeconds(time)) >= 0
             ){
                 sendMessage(this, acc.getUsername());
             }

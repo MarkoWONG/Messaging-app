@@ -48,7 +48,7 @@ public class Server {
             while (!serverSocket.isClosed()){
 
                 Socket socket = serverSocket.accept();
-                System.out.println("A new client has connected!" + serverSocket.getLocalPort() + "-->" + socket.getPort());
+                // System.out.println("A new client has connected!" + serverSocket.getLocalPort() + "-->" + socket.getPort());
                 ClientHandler clientHandler = new ClientHandler(this, socket);
 
                 Thread thread = new Thread(clientHandler);
@@ -145,8 +145,8 @@ public class Server {
         ServerSocket serverSocket = new ServerSocket(serverPort);
 
         // make serverSocket listen connection request from clients
-        System.out.println("===== Server is running =====");
-        System.out.println("===== Waiting for connection request from clients...=====");
+        // System.out.println("===== Server is running =====");
+        // System.out.println("===== Waiting for connection request from clients...=====");
 
         Server server = new Server(serverSocket, blockOut, timeOut);
 
