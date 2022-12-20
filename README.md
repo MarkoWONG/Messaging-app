@@ -1,6 +1,6 @@
 # COMP 3331 Assignment Program Design Report
 (By Marko Wong z530931)
-#Program design
+## Program design
 ![image](https://user-images.githubusercontent.com/79550698/208600689-a21cb2c4-69e5-4299-9488-210f089f0996.png)
 
 Link to diagram: https://lucid.app/documents/view/753ae4e7-0b68-4008-844d-4728f8e6c807
