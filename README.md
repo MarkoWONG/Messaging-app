@@ -33,7 +33,7 @@ separated by white spaces. The message can contain uppercase characters (A-Z), l
 <user> is specified, the server should check if this <user> is present in the credentials file. If an entry
 is not found (referred to as an invalid user), an appropriate error message should be displayed.
 
-  ![image](https://user-images.githubusercontent.com/79550698/208602615-94709c61-68fc-4419-a3df-24a2da46410a.png)
+![image](https://user-images.githubusercontent.com/79550698/208603099-27e90adf-3f61-4cdb-8b9f-c6f4e3e746aa.png)
 ![image](https://user-images.githubusercontent.com/79550698/208602794-1f6bca45-4578-4a24-bf60-1a91ed90bf61.png)
 
 
