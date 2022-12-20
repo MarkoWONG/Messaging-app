@@ -1,5 +1,4 @@
 # Socket Programming Messenging Application
-(By Marko Wong z530931)
 ## Program design
 ![image](https://user-images.githubusercontent.com/79550698/208600689-a21cb2c4-69e5-4299-9488-210f089f0996.png)
 
