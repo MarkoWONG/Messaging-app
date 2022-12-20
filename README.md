@@ -1,4 +1,32 @@
 # Socket Programming Messenging Application
+
+## File Names & Execution
+The main code for the server and client should be contained in the following files: Client.java or client.py. 
+The server accept the following three arguments:
+• server_port: this is the port number which the server will use to communicate with the
+clients. Recall that a TCP socket is NOT uniquely identified by the server port number. So, it
+is possible for multiple TCP connections to use the same server-side port number.
+• block_duration: this is the duration in seconds for which a user should be blocked after
+three unsuccessful authentication attempts.
+• timeout: this is the duration in seconds of inactivity after which a user is logged off by the
+server.
+The server should be executed before any of the clients. It should be initiated as follows:
+
+java Server server_port block_duration timeout
+
+The client should accept the following argument:
+• server_port: this is the port number being used by the server. This argument should be the
+same as the first argument of the server.
+
+Note that, you do not have to specify the port to be used by the client. The client program should
+allow the operating system to pick a random available port. Each client should be initiated in a
+separate terminal as follows:
+
+java Client server_port 
+
+Note: The server and multiple clients should all be executed on the same machine on separate
+terminals. In the client program, use 127.0.0.1 (localhost) as the server IP address.
+
 ## Program design
 ![image](https://user-images.githubusercontent.com/79550698/208600689-a21cb2c4-69e5-4299-9488-210f089f0996.png)
 
