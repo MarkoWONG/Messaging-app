@@ -23,6 +23,51 @@ java Client server_port
 Note: The server and multiple clients should all be executed on the same machine on separate
 terminals. In the client program, use 127.0.0.1 (localhost) as the server IP address.
 
+## Commands supported
+After a user is logged in, the client should support all the commands shown in the table below. For
+the following, assume that commands were run by user Yoda. You may assume that during marking
+the commands will be issued in the correct format as noted below with the appropriate arguments and
+a single white space between arguments. The <message> can however contain multiple words
+separated by white spaces. The message can contain uppercase characters (A-Z), lowercase characters
+(a-z), digits (0-9) and special characters (~!@#$%^&*_-+=`|\(){}[]:;"'<>,.?/). For commands where
+<user> is specified, the server should check if this <user> is present in the credentials file. If an entry
+is not found (referred to as an invalid user), an appropriate error message should be displayed.
+
+  ![image](https://user-images.githubusercontent.com/79550698/208602615-94709c61-68fc-4419-a3df-24a2da46410a.png)
+![image](https://user-images.githubusercontent.com/79550698/208602794-1f6bca45-4578-4a24-bf60-1a91ed90bf61.png)
+
+
+Any command that is not listed above should result in an error message being displayed to the user.
+The interaction with the user should be via the terminal (i.e., command line). All messages must be
+displayed in the same terminal. There is no need to create separate terminals for messaging with
+different users.
+  
+The server program should not print anything at the terminal. If you wish to print to the terminal for
+debugging purposes, then include an optional debug flag (e.g. –d) as a command line argument for
+the server. When this optional argument is included, your server can print debugging information to
+the terminal. This same practice could also be employed for the client program.
+
+## Peer to Peer Messaging
+Some users may prefer to have some privacy during messaging. They may want to message their
+friends directly without all their conversation being routed via the server. A peer-to-peer messaging
+client is a good solution for this scenario. In addition to the above functionalities, you should
+implement peer-to-peer messaging (also referred to as private messaging). Private messages should
+be exchanged over a TCP connection between the two clients. Assume that client A wants to setup
+a private chat with client B. Setting up a TCP connection between the two will require certain
+information about B to be communicated to A via the server. We will not specify it here because there
+are a few different ways to do that. We will leave the design to you.
+  
+To implement this functionality your client should support the following commands (in addition to
+those listed in Section 3.3). For the following, assume that commands were run by user Yoda. The
+notion of an invalid use is the same as described in Section 3.3. A p2p messaging session can only be
+started with an online user.
+
+  ![image](https://user-images.githubusercontent.com/79550698/208602968-0ba5c779-79b7-4c9b-ae5b-1a0bda44ddf4.png)
+
+  
+When a user logs off (or is timed out), any on-going p2p messaging session must conclude. A message
+to this effect must be displayed to the other user involved in the p2p messaging session.
+  
 ## Program design
 ![image](https://user-images.githubusercontent.com/79550698/208600689-a21cb2c4-69e5-4299-9488-210f089f0996.png)
 
